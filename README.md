@@ -9,3 +9,6 @@ A timesheet and invoice generation system for Workers Co-Operatives.
     >>> novaweb.model.db.create_all(bind='novaweb')
     ```
 1. To load test data...
+    ```sh
+    ./createschema.py
+		````
