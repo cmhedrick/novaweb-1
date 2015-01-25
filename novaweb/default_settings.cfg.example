@@ -1,0 +1,9 @@
+DEBUG = True
+SECRET_KEY = 'OMG! I am a super secret key that is publically visible on github!'
+HOST = '127.0.0.1'
+PORT = 5555
+SQLALCHEMY_DATABASE_URI = 'mysql://novaweb:password@localhost/novaweb'
+SQLALCHEMY_BINDS = {
+  'novaweb':  'mysql://novaweb:password@localhost/novaweb',
+}
+#SQLALCHEMY_ECHO = True
