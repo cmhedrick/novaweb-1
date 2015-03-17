@@ -1,0 +1,15 @@
+{% from "_formhelpers.html" import render_field %}
+<div>
+  {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+  {% endfor %}
+  <form action="{{url_for('adduser')}}" method="post">
+    {{ render_field(form.hidden_tag) }}
+    {{ render_field(form.name) }}
+    {{ render_field(form.username) }}
+    {{ render_field(form.password) }}
+    {{ render_field(form.password2) }}
+    {{ render_field(form.email) }}
+    <p><input type=submit value=Submit /></p>
+  </form>
+</div>

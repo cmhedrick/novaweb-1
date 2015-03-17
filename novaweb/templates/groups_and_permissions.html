@@ -1,0 +1,117 @@
+{% from "_formhelpers.html" import render_field %}
+{% extends "admin.html" %}
+{% block head %}
+  {{ super() }}
+  <script type='text/javascript' src={{ url_for('static', filename='tristate.js') }}></script>
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+
+{% block content %}
+
+<h3> Permissions </h3>
+<form action="" method="post">
+<table style="width: 100%" border="1">
+  <tr>
+    <th rowspan="3"></th>
+    <th colspan="{{ permissions['total']}}">Permissions</th>
+  </tr>
+  <tr>
+    {% for group in permissions['permissions'] %}
+      <th colspan="{{ permissions['permissions'][group]|count }}">{{ group }}</th>
+    {% endfor %}
+  </tr>
+  <tr>
+    {% for group in permissions['permissions'] %}
+      {% for perm in permissions['permissions'][group] %}
+        <th>{{ perm }}</th>
+      {% endfor %}
+    {% endfor %}
+  </tr>
+  {% for group in permissions['group_matrix'] %}
+    <tr>
+      <td><img src={{ url_for('static', filename='users.png') }} /> {{ permissions['group_matrix'][group]['name'] }}</td>
+      {% for perm in permissions['group_matrix'][group]['perms'] %}
+      <td><input type="checkbox" name="g{{group}}_r{{perm}}" value="1" {% if permissions['group_matrix'][group]['perms'][perm] == 1 %}checked{% endif %} /></td>
+      {% endfor %}
+    </tr>
+  {% endfor %}
+  {% for user in permissions['user_matrix'] %}
+    <tr>
+      <td><img src={{ url_for('static', filename='user.png') }} /> {{ permissions['user_matrix'][user]['name'] }}</td>
+      {% for perm in permissions['user_matrix'][user]['perms'] %}
+      <td>
+        <span id="tristate_u{{user}}_r{{perm}}" style="cursor: default; float: left" class="tristate">
+        <input type="hidden" id="u{{user}}_r{{perm}}" name="u{{user}}_r{{perm}}" value="{{permissions['user_matrix'][user]['perms'][perm]}}" />
+        <script type="text/javascript">
+          initTriStateCheckBox("tristate_u{{user}}_r{{perm}}", "u{{user}}_r{{perm}}", true);
+        </script>
+        </span>
+        <span class="disable_overlay">&nbsp;</span>
+      </td>
+      {% endfor %}
+    </tr>
+  {% endfor %}
+</table>
+<br />
+<h3> Group Memberships </h3>
+<div class="user_groups">
+  <table style="width: 100%" border="1">
+    <tr>
+      <th rowspan="2"></th>
+      <th colspan="{{ group_model['total'] }}">Groups</th>
+    </tr>
+    <tr>
+      {% for group_name in group_model['group_names'] %}
+        <th>{{ group_name }}</th>
+      {% endfor %}
+    </tr>
+    {% for user in group_model['user_group_matrix'] %}
+    <tr>
+      <td>{{ group_model['user_group_matrix'][user]['name'] }}</td>
+      {% for group in group_model['user_group_matrix'][user]['groups'] %}
+      <td><input type="checkbox" name="u{{user}}_g{{group}}" value="1" {% if group_model['user_group_matrix'][user]['groups'][group] %}checked{% endif %} /></td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+<br />
+
+<div>
+  <a id="adduser" href="#" title="Add new user">Add new user</a>
+  <a id="addgroup" href="#" title="Add new user">Add new group</a>
+</div>
+<br />
+<script type='text/javascript'>
+  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, close: function(ev, ui) { window.location.reload() }  };
+  var $adduser_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+  $adduser_dialog.dialog("option", 'title', "Add new user");
+  var link = "{{url_for('adduser')}}";
+  $("#adduser").click(function(event) {
+    event.preventDefault();
+    $adduser_dialog.load(link);
+    $adduser_dialog.dialog("open");
+  });
+
+  var $addgroup_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+  $addgroup_dialog.dialog("option", 'title', "Add new group");
+  var link = "{{url_for('addgroup')}}";
+  $("#addgroup").click(function(event) {
+    event.preventDefault();
+    $addgroup_dialog.load(link);
+    $addgroup_dialog.dialog("open");
+  });
+
+</script>
+
+<input type="submit" value="Submit" />
+</form>
+
+{% if not current_user.has_role('gp_edit') %}
+  <script type='text/javascript'>
+    $("form input:checkbox").attr("disabled", true);
+    $(".disable_overlay").show();
+  </script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,40 @@
+{% from "_formhelpers.html" import render_field %}
+{% extends "admin.html" %}
+{% block head %}
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+
+{% block content %}
+
+<h3> User Management </h3>
+<form action="" method="post">
+<table style="width: 100%" border="1">
+  <tr>
+    <th rowspan="2"></th>
+    <th colspan="{{ total }}">Groups</th>
+  </tr>
+  <tr>
+    {% for group_name in group_names %}
+      <th>{{ group_name }}</th>
+    {% endfor %}
+  </tr>
+  {% for user in user_matrix %}
+  <tr>
+    <td>{{ user_matrix[user]['name'] }}</td>
+    {% for group in user_matrix[user]['groups'] %}
+    <td><input type="checkbox" name="u{{user}}_g{{group}}" value="1" {% if user_matrix[user]['groups'][group] %}checked{% endif %} /></td>
+    {% endfor %}
+  </tr>
+  {% endfor %}
+</table>
+    
+<input type="submit" value="Submit" />
+</form>
+
+{% if not current_user.has_role('um_edit') %}
+  <script type='text/javascript'>
+    $("form input:checkbox").attr("disabled", true);
+  </script>
+{% endif %}
+
+{% endblock %}
