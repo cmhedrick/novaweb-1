@@ -1,5 +1,5 @@
 {% from "_formhelpers.html" import render_field %}
-{% extends "admin.html" %}
+{% extends "layout.html" %}
 {% block head %}
   {{ super() }}
   <script type='text/javascript' src={{ url_for('static', filename='tristate.js') }}></script>
@@ -79,26 +79,26 @@
 
 <div>
   <a id="adduser" href="#" title="Add new user">Add new user</a>
-  <a id="addgroup" href="#" title="Add new user">Add new group</a>
+  <a id="addgroup" href="#" title="Add new group">Add new group</a>
 </div>
 <br />
 <script type='text/javascript'>
-  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, close: function(ev, ui) { window.location.reload() }  };
+  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
   var $adduser_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
   $adduser_dialog.dialog("option", 'title', "Add new user");
-  var link = "{{url_for('adduser')}}";
+  var ulink = "{{url_for('adduser')}}";
   $("#adduser").click(function(event) {
     event.preventDefault();
-    $adduser_dialog.load(link);
+    $adduser_dialog.load(ulink);
     $adduser_dialog.dialog("open");
   });
 
   var $addgroup_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
   $addgroup_dialog.dialog("option", 'title', "Add new group");
-  var link = "{{url_for('addgroup')}}";
+  var glink = "{{url_for('addgroup')}}";
   $("#addgroup").click(function(event) {
     event.preventDefault();
-    $addgroup_dialog.load(link);
+    $addgroup_dialog.load(glink);
     $addgroup_dialog.dialog("open");
   });
 

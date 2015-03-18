@@ -64,9 +64,10 @@ class User(db.Model, UserMixin):
   password = db.Column(db.String(255))
   active = db.Column(db.Boolean())
   roles = db.relationship("UsersRoles",backref="user")
+  customers = db.relationship("UsersCustomers", backref="user")
   groups = db.relationship("Group", secondary=groups_users, backref=db.backref('users', lazy='dynamic'))
 
-  def __init__(self, username, password, email, name):
+  def __init__(self, username, password, email, name=None):
     self.username = username
     self.set_password(password)
     self.email = email
@@ -115,3 +116,38 @@ class Group(db.Model):
 
   def __init__(self, name):
     self.name = name
+
+class Customer(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  name = db.Column(db.String(255), unique=True)
+  email = db.Column(db.String(255), unique=True)
+  contract = db.Column(db.Text())
+  # reference to invoices
+
+  def __init__(self, name, email, contract=None):
+    self.name = name
+    self.email = email
+    self.contract = contract
+
+# This is an M2M with "Association" pattern
+class UsersCustomers(db.Model):
+  user_id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key = True)
+  customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"), primary_key = True)
+  pay_rate = db.Column(db.Integer)
+  bill_rate = db.Column(db.Integer)
+  customer = db.relationship("Customer", backref="customer_assocs")
+  
+
+#class Invoice(db.Model):
+#  id = db.Column(db.Integer, primary_key=True)
+
+#class Timesheet(db.Model):
+#  id = db.Column(db.Integer, primary_key=True)
+#  approved = db.column(db.Boolean())
+# some user reference
+
+# A user has many timesheets
+# That is, a timesheet belongs to a user
+# A timesheet has many customers
+# Customers appear on many timesheets
+# An Invoice is an aggregation of time across timesheets for a period

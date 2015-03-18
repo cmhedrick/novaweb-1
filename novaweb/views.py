@@ -118,6 +118,82 @@ def addgroup():
     return redirect(url_for("groups_and_permissions"))
   return render_template("addgroup.html", form=form)
 
+@app.route("/addcustomer", methods=['GET', 'POST'])
+@login_required
+@require_role("c_edit")
+def addcustomer():
+  form = AddCustomer(request.form)
+  if form.validate_on_submit():
+    customer_name = request.form['name']
+    customer_email = request.form['email']
+    customer_contract = request.form['contract']
+    customer = Customer.query.filter_by(name=customer_name).first()
+    if customer:
+      flash("Customer already exists.")
+    else:
+      newcustomer = Customer(name=customer_name, email=customer_email, contract=customer_contract) 
+      db.session.add(newcustomer)
+      db.session.commit()
+      flash("New customer added")
+    return redirect(url_for("contracts"))
+  return render_template("addcustomer.html", form=form)
+
+@app.route("/modify_customer_users", methods=['GET', 'POST'])
+@login_required
+@require_role("c_edit")
+def modify_customer_users():
+  if "customer_id" not in request.values:
+    flash("Invalid Request: Missing Customer ID.")
+    return redirect(url_for("contracts"))
+  customer = Customer.query.filter_by(id=request.values['customer_id']).first()
+  if customer is None:
+    flash("Invalid Customer ID")
+    return redirect(url_for("contracts"))
+  users = User.query.all()
+  if request.method == 'GET':
+    user_matrix = {}
+    for user in users:
+      user_customer = UsersCustomers.query.filter_by(user_id=user.id, customer_id=customer.id).first()
+      if user.name is not None: username = user.name
+      else: username = user.username
+      user_matrix[user.id] = {'name': username, 'user_customer': user_customer}
+    return render_template("modify_customer_users.html", user_matrix=user_matrix)
+  else:
+    # Handle POST
+    for user in users:
+      user_key = "u%s" % user.id
+      user_customer = UsersCustomers.query.filter_by(user_id=user.id, customer_id=customer.id).first()
+      if user_customer is None:
+        user_customer = UsersCustomers(user_id=user.id, customer_id=customer.id)
+        user_customer.customer = customer
+        user.customers.append(user_customer)
+        db.session.add(user_customer)
+      if user_key in request.values:
+        b_key = "u%s_b" % user.id
+        p_key = "u%s_p" % user.id
+        if b_key not in request.values: bpay = 0
+        else: bpay = request.values[b_key]
+        if p_key not in request.values: ppay = 0
+        else: ppay = request.values[p_key]
+        user_customer.bill_rate = bpay
+        user_customer.pay_rate = ppay
+      else:
+        if user_customer in user.customers:
+          user.customers.remove(user_customer)
+          db.session.delete(user_customer)
+    flash("Contract updated.")
+    print "right here."
+    db.session.commit()
+    print "not here."
+    return redirect(url_for("contracts"))
+
+@app.route("/contracts")
+@login_required
+@require_role("c_view")
+def contracts():
+  customers = Customer.query.order_by('id').all()
+  return render_template("contracts.html", customers=customers)
+
 @app.route("/groups_and_permissions")
 @login_required
 @require_role("gp_view")
@@ -130,6 +206,7 @@ def groups_and_permissions():
   prefixes = [ role.name.split("_")[0] for role in roles ]
   prefix_map = { 'um': "User Management",
                  'gp': 'Groups & Permissions',
+                 'c': 'Contracts',
                }
   group_names = [ group.name for group in groups ]
   user_group_matrix = {}

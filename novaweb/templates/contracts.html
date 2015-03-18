@@ -1,0 +1,78 @@
+{% from "_formhelpers.html" import render_field %}
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <script type='text/javascript' src={{ url_for('static', filename='tristate.js') }}></script>
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+
+{% block content %}
+
+<script type="text/javascript">
+  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
+</script>
+
+
+<div>
+  <table class="customers">
+    {% for customer in customers %}
+    <tr>
+      <td>{{customer.name}}</td>
+      <td><a href="mailto:{{customer.email}}">{{customer.email}}</a></td>
+      <td><a href="#" class="view_contract" id="c_{{customer.id}}" title="View Contract">View Contract</a></td>
+      <td><a href="#" class="view_invoices" title="View Invoices">View Invoices</a></td>
+      <td><a href="#" data-id="{{customer.id}}" class="modify_customer_users">Modify Users</a></td>
+      <td>Assigned Employees</td>
+      <td>Billing Rate</td>
+      <td>Pay Rate</td>
+    </tr>
+      {% for user in customer.customer_assocs %}
+      <tr>
+        <td></td><td></td><td></td><td></td><td></td>
+        <td>{% if user.user.name %}{{user.user.name}}{% else %}{{ user.user.username }}{% endif %}</td>
+        <td>{{user.bill_rate}}</td>
+        <td>{{user.pay_rate}}</td>
+      </tr>
+      {% endfor %}
+    <script type="text/javascript">
+      var $dialog{{customer.id}} = $("<div>{{customer.contract}}</div>").dialog(JQUERYUI_MODAL_OPTIONS);
+      $dialog{{customer.id}}.dialog("option", "title", "Contract Details");
+      $("#c_{{customer.id}}").click(function(event) {
+        event.preventDefault();
+        $dialog{{customer.id}}.dialog("open");
+      });
+    </script>
+  {% endfor %}
+  </table>
+</div>
+
+<div>
+  <a id="addcustomer" href="#" title="Add new customer">Add new customer</a>
+</div>
+<br />
+<script type='text/javascript'>
+  var $addcustomer_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+  $addcustomer_dialog.dialog("option", 'title', "Add new user");
+  var link = "{{url_for('addcustomer')}}";
+  $("#addcustomer").click(function(event) {
+    event.preventDefault();
+    $addcustomer_dialog.load(link);
+    $addcustomer_dialog.dialog("open");
+  });
+
+
+  $(document).ready(function() {
+    $('.modify_customer_users').each(function(i, obj) {
+      var $mcudialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+      $mcudialog.dialog('option', 'title', "Modify Contract Users");
+      $(obj).click(function(event) {
+        var link = "{{url_for('modify_customer_users')}}?customer_id="+$(this).data("id");
+        $mcudialog.load(link)
+        event.preventDefault();
+        $mcudialog.dialog("open");
+      });
+    });
+  });
+</script>
+
+{% endblock %}
