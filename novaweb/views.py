@@ -163,12 +163,12 @@ def modify_customer_users():
     for user in users:
       user_key = "u%s" % user.id
       user_customer = UsersCustomers.query.filter_by(user_id=user.id, customer_id=customer.id).first()
-      if user_customer is None:
-        user_customer = UsersCustomers(user_id=user.id, customer_id=customer.id)
-        user_customer.customer = customer
-        user.customers.append(user_customer)
-        db.session.add(user_customer)
       if user_key in request.values:
+        if user_customer is None:
+          user_customer = UsersCustomers(user_id=user.id, customer_id=customer.id)
+          user_customer.customer = customer
+        db.session.add(user_customer)
+        user.customers.append(user_customer)
         b_key = "u%s_b" % user.id
         p_key = "u%s_p" % user.id
         if b_key not in request.values: bpay = 0
@@ -178,13 +178,12 @@ def modify_customer_users():
         user_customer.bill_rate = bpay
         user_customer.pay_rate = ppay
       else:
-        if user_customer in user.customers:
-          user.customers.remove(user_customer)
-          db.session.delete(user_customer)
+        if user_customer is not None:
+          if user_customer in user.customers:
+            user.customers.remove(user_customer)
+            db.session.delete(user_customer)
     flash("Contract updated.")
-    print "right here."
     db.session.commit()
-    print "not here."
     return redirect(url_for("contracts"))
 
 @app.route("/contracts")
