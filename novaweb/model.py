@@ -7,6 +7,8 @@ from flask.ext.sqlalchemy import SQLAlchemy
 #from flask.ext.login import UserMixin
 from flask.ext.security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+import datetime
+from uuid import uuid1 as uuid
 from novaweb import app
 
 db = SQLAlchemy(app)
@@ -74,6 +76,9 @@ class User(db.Model, UserMixin):
     self.active = True
     self.name = name
 
+  def __repr__(self):
+    return "Username: %s" % self.username
+
   def set_password(self, password):
     self.password = generate_password_hash(password)
 
@@ -100,6 +105,14 @@ class User(db.Model, UserMixin):
       user_role_matrix[role.role.name] = role.permission_bit
     return user_role_matrix
 
+  def hours_worked(self, pay_period):
+    try:
+      logged_hours = self.timesheets.filter_by(payperiod=pay_period).first().logged_hours.all()
+      hours = [x.hours for x in logged_hours]
+    except:
+      hours = [0]
+    return sum(hours)
+
 class Role(db.Model, RoleMixin):
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String(255), unique=True)
@@ -108,6 +121,9 @@ class Role(db.Model, RoleMixin):
   def __init__(self, name, desc):
     self.name = name
     self.desc = desc
+
+  def __repr__(self):
+    return "Role: %s" % self.name
 
 class Group(db.Model):
   id = db.Column(db.Integer, primary_key=True)
@@ -122,12 +138,23 @@ class Customer(db.Model):
   name = db.Column(db.String(255), unique=True)
   email = db.Column(db.String(255), unique=True)
   contract = db.Column(db.Text())
-  # reference to invoices
 
   def __init__(self, name, email, contract=None):
     self.name = name
     self.email = email
     self.contract = contract
+
+  def __repr__(self):
+    return "Customer: %s" % name
+
+  def invoice_hours(self, pay_period):
+    logged_hours = []
+    for timesheet in pay_period.timesheets.all():
+      timesheet_hours = self.logged_hours.filter_by(timesheet=timesheet).all()
+      logged_hours += timesheet_hours
+    hours = [x.hours for x in logged_hours]
+    return sum(hours)
+       
 
 # This is an M2M with "Association" pattern
 class UsersCustomers(db.Model):
@@ -136,18 +163,95 @@ class UsersCustomers(db.Model):
   pay_rate = db.Column(db.Integer)
   bill_rate = db.Column(db.Integer)
   customer = db.relationship("Customer", backref="customer_assocs")
-  
 
-#class Invoice(db.Model):
-#  id = db.Column(db.Integer, primary_key=True)
+class PayPeriod(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  start_date = db.Column(db.DateTime)
+  end_date = db.Column(db.DateTime)
 
-#class Timesheet(db.Model):
-#  id = db.Column(db.Integer, primary_key=True)
-#  approved = db.column(db.Boolean())
-# some user reference
+  def __init__(self, start_date, end_date):
+    self.start_date = start_date.date()
+    self.end_date = end_date.date()
 
-# A user has many timesheets
-# That is, a timesheet belongs to a user
-# A timesheet has many customers
-# Customers appear on many timesheets
-# An Invoice is an aggregation of time across timesheets for a period
+  def __repr__(self):
+    return "Start: %s End: %s" % (self.start_date, self.end_date)
+
+class Timesheet(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+  user = db.relationship('User',  backref=db.backref('timesheets', lazy='dynamic'))
+  payperiod_id = db.Column(db.Integer, db.ForeignKey('pay_period.id'))
+  payperiod = db.relationship('PayPeriod', backref=db.backref('timesheets', lazy='dynamic'))
+  submitted = db.Column(db.Boolean)
+  approved = db.Column(db.Boolean)
+
+  def __init__(self, user, payperiod):
+    self.user = user
+    self.payperiod = payperiod
+    self.submitted = False
+    self.approved = False
+
+  def __repr__(self):
+    if self.submitted:
+      if self.approved:
+        status = "Submitted and Approved"
+      else:
+        status = "Submitted Pending Approval"
+    else:
+      status = "Unsubmitted"
+    return "Timesheet (%s) for %s. Status: %s" % (self.payperiod, self.user, status)
+
+class LoggedHours(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  timesheet_id = db.Column(db.Integer, db.ForeignKey('timesheet.id'))
+  timesheet = db.relationship('Timesheet', backref=db.backref('logged_hours', lazy='dynamic'))
+  customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'))
+  customer = db.relationship('Customer', backref=db.backref('logged_hours', lazy='dynamic'))
+  day = db.Column(db.DateTime)
+  hours = db.Column(db.Integer)
+  note = db.Column(db.Text())
+
+  def __init__(self, timesheet, customer, day=None, hours=0, note=None):
+    self.timesheet = timesheet
+    self.customer = customer
+    if day is None:
+      day = datetime.date.today()
+    self.day = day
+    self.hours = hours
+    self.note = note
+
+class Invoice(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'))
+  customer = db.relationship('Customer', backref=db.backref('invoices', lazy='dynamic'))
+  payperiod_id = db.Column(db.Integer, db.ForeignKey('pay_period.id'))
+  payperiod = db.relationship('PayPeriod', backref=db.backref('invoices', lazy='dynamic'))
+  total_hours = db.Column(db.Integer)
+  sent = db.Column(db.Boolean)
+  invoice_pdf = db.Column(db.String(255))
+
+  def __init__(self, customer, pay_period):
+    self.customer = customer
+    self.payperiod = pay_period
+    self.sent = False
+    self.update_invoice()
+
+  def update_invoice(self):
+    self.total_hours = self.customer.invoice_hours(self.payperiod)
+    self.generate_invoice()
+
+  def send_invoice(self):
+    email = self.customer.email
+    output = self.invoice_pdf
+    print "Sending invoice to: %s with: %s" % (email, output)
+    self.sent = True
+
+  def generate_invoice(self):
+    filename = "%s.pdf" % uuid().hex
+    #filepath = app.config.blah
+    # generate pdf with some codes
+    # save it to filepath/filename
+    self.invoice_pdf = filename
+    return "Customer: %s Hours: %s" % (self.customer.name, self.total_hours)
+
+

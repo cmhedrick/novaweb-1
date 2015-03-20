@@ -1,8 +1,10 @@
+import datetime
 from novaweb import app, login_manager
 from flask.ext.login import login_required, login_user, logout_user, current_user
 from novaweb.model import *
 from flask import current_app, render_template, request, url_for, flash, redirect, jsonify 
 from forms import *
+from dateutil import parser as dateparser
 from functools import wraps
 
 # User Loader Method. Don't touch.
@@ -138,6 +140,7 @@ def addcustomer():
     return redirect(url_for("contracts"))
   return render_template("addcustomer.html", form=form)
 
+
 @app.route("/modify_customer_users", methods=['GET', 'POST'])
 @login_required
 @require_role("c_edit")
@@ -206,6 +209,7 @@ def groups_and_permissions():
   prefix_map = { 'um': "User Management",
                  'gp': 'Groups & Permissions',
                  'c': 'Contracts',
+                 'pp': 'Pay Period',
                }
   group_names = [ group.name for group in groups ]
   user_group_matrix = {}
@@ -287,22 +291,102 @@ def groups_and_permissions_handler():
   flash("Permissions saved.")
   return redirect(url_for("groups_and_permissions"))
 
-
-
-
-@app.route('/zomg')
+@app.route("/addpayperiod", methods=['GET', 'POST'])
 @login_required
-@require_role("some_role")
-@require_role("some_other_role")
-@require_role("some_fourth_role", "new role entry")
-def zomg():
-  flash("This worked.")
-  return render_template("index.html")
+@require_role("pp_edit")
+def addpayperiod():
+  form = AddPayPeriod(request.form)
+  latest_date = PayPeriod.query.order_by(PayPeriod.end_date.desc()).first().end_date.date() + datetime.timedelta(days=1)
+  if form.validate_on_submit():
+    start_date = dateparser.parse(request.values['start_date'])
+    end_date = dateparser.parse(request.values['end_date'])
+    valid_check = True
+    if start_date > end_date:
+      valid_check = False
+      flash("Error: Start date must be later than end date")
+    payperiods = PayPeriod.query.all()
+    for period in payperiods:
+      if start_date > period.start_date and start_date < period.end_date:
+        valid_check = False
+        flash("Error: Start date can't overlap another pay period")
+      if end_date < period.end_date and end_date > period.start_date:
+        valid_check = False
+        flash("Error: End date can't overlap another pay period")
+    if valid_check:
+      ppay = PayPeriod(start_date, end_date)
+      db.session.add(ppay)
+      db.session.commit()
+      flash("New pay period created.")
+    return redirect(url_for("payperiod"))
+  return render_template("addpayperiod.html", form=form, latest_date=latest_date)  
+
+@app.route("/payperiod", methods=['GET'])
+@login_required
+@require_role("pp_view")
+def payperiod():
+  payperiods = PayPeriod.query.all()
+  return render_template("payperiod.html", payperiods=payperiods)
 
 
+@app.route("/timesheet", methods=['GET'])
+@login_required
+@require_role("ts_view")
+def timesheet():
+  user = current_user
+  if 'user_id' in request.values:
+    if current_user.id != request.values['user_id']:
+      if not current_user.has_role("ts_view_other"):
+        flash("You do not have permission to see other users timesheets.")
+        return redirect(url_for("timesheet")) # maybe make manage users?
+      else:
+        user_id = request.values['user_id']
+        user = User.query.filter_by(id=user_id).first()
+        if user is None:
+          flash("User not found.")
+          return redirect(url_for("timesheet")) # maybe make manage users?
+  if 'payperiod_id' in request.values:
+    get_current_payperiod = False
+    payperiod = PayPeriod.query.get(request.values['payperiod_id'])
+    if payperiod is None:
+      flash("Invalid payperiod specified. Displaying current payperiod.")
+      get_current_payperiod = True
+  else:
+    get_current_payperiod = True
+  if get_current_payperiod:
+    today = datetime.date.today()
+    payperiod = PayPeriod.query.filter(PayPeriod.start_date < today, PayPeriod.end_date > today).first()
+  if payperiod is None:
+    flash("No payperiod is set up for today. Please set up the payroll cycle!")
+    return direct(url_for("payperiod"))
+  timesheet = Timesheet.query.filter_by(user=user, payperiod=payperiod).first()
+  if timesheet is None:
+    timesheet = Timesheet(user, payperiod)
+    db.session.add(timesheet)
+    db.session.commit()
+  start_date = payperiod.start_date
+  end_date = payperiod.end_date
+  current_date = start_date
+  date_range = []
+  while current_date <= end_date:
+    date_range.append(current_date.strftime("%Y_%m_%d"))
+    current_date += datetime.timedelta(days=1)
+  # At this point, we have the correct user, payperiod, timesheet, and a range of the relevant dates
+  # i will do rest later.
+  output = "Timesheet for: %s" % (user.username)
+  output += "<br />Pay Period: %s" % (payperiod)
+  output += "<br />Timesheet: %s" % (timesheet)
+  output += "<br />Date range: %s" % (date_range)
+  return output
+  
+    
 @app.route('/')
 @login_required
 def index():
   return render_template("index.html")
 
 
+@app.route('/load_permission_groups')
+@login_required
+@require_role("ts_view_other")
+def load_permission_groups():
+  return "You have reached here in err."
