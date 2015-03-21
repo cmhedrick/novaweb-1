@@ -69,7 +69,7 @@ class User(db.Model, UserMixin):
   customers = db.relationship("UsersCustomers", backref="user")
   groups = db.relationship("Group", secondary=groups_users, backref=db.backref('users', lazy='dynamic'))
 
-  def __init__(self, username, password, email, name=None):
+  def __init__(self, username, password, email, name=None, active=True):
     self.username = username
     self.set_password(password)
     self.email = email
@@ -145,7 +145,7 @@ class Customer(db.Model):
     self.contract = contract
 
   def __repr__(self):
-    return "Customer: %s" % name
+    return "Customer: %s" % self.name
 
   def invoice_hours(self, pay_period):
     logged_hours = []
@@ -175,6 +175,15 @@ class PayPeriod(db.Model):
 
   def __repr__(self):
     return "Start: %s End: %s" % (self.start_date, self.end_date)
+
+  def get_headers(self):
+    date_headers = []
+    current_date = self.start_date
+    while current_date <= self.end_date:
+      date_headers.append((current_date.strftime("%a"), current_date.strftime("%d")))
+      current_date += datetime.timedelta(days=1)
+    return date_headers
+
 
 class Timesheet(db.Model):
   id = db.Column(db.Integer, primary_key=True)

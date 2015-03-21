@@ -3,7 +3,7 @@
   {% for message in get_flashed_messages() %}
     <div class="flash">{{ message }}</div>
   {% endfor %}
-  <form action="{{url_for('addgroup')}}{% if group_id %}?group_id={{group_id}}{% endif %}" method="post">
+  <form action="{{url_for('editgroup')}}" method="post">
     {{ render_field(form.hidden_tag) }}
     {{ render_field(form.name) }}
     <p><input type=submit value=Submit /></p>

@@ -29,7 +29,7 @@
   </tr>
   {% for group in permissions['group_matrix'] %}
     <tr>
-      <td><img src={{ url_for('static', filename='users.png') }} /> {{ permissions['group_matrix'][group]['name'] }}</td>
+      <td><img src={{ url_for('static', filename='users.png') }} /> {{ permissions['group_matrix'][group]['group'].name}} <a href="#" class="edit_group" data-id="{{permissions['group_matrix'][group]['group'].id}}">(edit group icon)</a><a href="{{url_for("deletegroup", group_id=permissions['group_matrix'][group]['group'].id)}}" class="delete_group">(delete group icon)</a> </td>
       {% for perm in permissions['group_matrix'][group]['perms'] %}
       <td><input type="checkbox" name="g{{group}}_r{{perm}}" value="1" {% if permissions['group_matrix'][group]['perms'][perm] == 1 %}checked{% endif %} /></td>
       {% endfor %}
@@ -37,7 +37,7 @@
   {% endfor %}
   {% for user in permissions['user_matrix'] %}
     <tr>
-      <td><img src={{ url_for('static', filename='user.png') }} /> {{ permissions['user_matrix'][user]['name'] }}</td>
+      <td><img src={{ url_for('static', filename='user.png') }} /> {{ permissions['user_matrix'][user]['name'].username }}</td>
       {% for perm in permissions['user_matrix'][user]['perms'] %}
       <td>
         <span id="tristate_u{{user}}_r{{perm}}" style="cursor: default; float: left" class="tristate">
@@ -62,12 +62,12 @@
     </tr>
     <tr>
       {% for group_name in group_model['group_names'] %}
-        <th>{{ group_name }}</th>
+        <th>{{ group_name.name }}</th>
       {% endfor %}
     </tr>
     {% for user in group_model['user_group_matrix'] %}
     <tr>
-      <td>{{ group_model['user_group_matrix'][user]['name'] }}</td>
+      <td>{{ group_model['user_group_matrix'][user]['name'].username }}</td>
       {% for group in group_model['user_group_matrix'][user]['groups'] %}
       <td><input type="checkbox" name="u{{user}}_g{{group}}" value="1" {% if group_model['user_group_matrix'][user]['groups'][group] %}checked{% endif %} /></td>
       {% endfor %}
@@ -76,22 +76,15 @@
   </table>
 </div>
 <br />
-
-<div>
-  <a id="adduser" href="#" title="Add new user">Add new user</a>
-  <a id="addgroup" href="#" title="Add new group">Add new group</a>
-</div>
+<a id="addgroup" href="#" title="Add new group">Add new group</a>
 <br />
+
+
+<input type="submit" value="Submit" />
+</form>
+
 <script type='text/javascript'>
   var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
-  var $adduser_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
-  $adduser_dialog.dialog("option", 'title', "Add new user");
-  var ulink = "{{url_for('adduser')}}";
-  $("#adduser").click(function(event) {
-    event.preventDefault();
-    $adduser_dialog.load(ulink);
-    $adduser_dialog.dialog("open");
-  });
 
   var $addgroup_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
   $addgroup_dialog.dialog("option", 'title', "Add new group");
@@ -102,10 +95,19 @@
     $addgroup_dialog.dialog("open");
   });
 
+  $(document).ready(function() {
+    $('.edit_group').each(function(i, obj) {
+      var $dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+      $dialog.dialog('option', 'title', 'Edit Group');
+      var link = "{{url_for('addgroup')}}?group_id="+$(this).data("id");
+      $dialog.load(link)
+      $(obj).click(function(event) {
+        event.preventDefault();
+        $dialog.dialog("open");
+      });
+    });
+  });
 </script>
-
-<input type="submit" value="Submit" />
-</form>
 
 {% if not current_user.has_role('gp_edit') %}
   <script type='text/javascript'>

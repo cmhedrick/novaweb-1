@@ -14,6 +14,7 @@ class AddUser(Form):
   username = TextField('Username', [validators.Required()])
   password = PasswordField('Password')
   password2 = PasswordField('Confirm password')
+  active = BooleanField('Active')
 
 class AddGroup(Form):
   name = TextField('Group Name')
