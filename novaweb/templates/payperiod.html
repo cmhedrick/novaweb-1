@@ -1,0 +1,42 @@
+{% from "_formhelpers.html" import render_field %}
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+
+{% block content %}
+
+<script type="text/javascript">
+  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
+</script>
+
+
+<div>
+  <table class="payperiods">
+    {% for payperiod in payperiods %}
+    <tr>
+      <td><a href="#" title="View Timesheets">View Timesheets</a></td>
+      <td>{{payperiod.start_date.date()}}</td>
+      <td>{{payperiod.end_date.date()}}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div>
+  <a id="addpayperiod" href="#" title="Add new pay period">Add new pay period</a>
+</div>
+<br />
+<script type='text/javascript'>
+  var $addpayperiod_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+  $addpayperiod_dialog.dialog("option", 'title', "Add new pay period");
+  var link = "{{url_for('addpayperiod')}}";
+  $("#addpayperiod").click(function(event) {
+    event.preventDefault();
+    $addpayperiod_dialog.load(link);
+    $addpayperiod_dialog.dialog("open");
+  });
+</script>
+
+{% endblock %}

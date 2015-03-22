@@ -1,9 +1,11 @@
+<div class="content">
 {% from "_formhelpers.html" import render_field %}
 {% extends "layout.html" %}
 {% block title %} Login {% endblock %}
 {% block content %}
-
-<div id="login">
+<div class="loginContainer">
+    <a href="<?php echo URL; ?>"><img class="loginLogo" src="<?php echo EBURL; ?>public/img/ScriybLogo.png"
+                                      alt="Scriyb Logo"></a>
   <form action="" method="post">
     {{ render_field(form.hidden_tag) }}
     {{ render_field(form.username) }}
@@ -11,5 +13,5 @@
     <p><input type=submit value=Submit /></p>
   </form>
 </div>
-
 {% endblock %}
+</div>

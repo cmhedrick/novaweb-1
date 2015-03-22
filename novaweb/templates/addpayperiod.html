@@ -1,0 +1,31 @@
+<script type="text/javascript">
+  $(function() {
+    $( '#start_date' ).datepicker({
+      dateFormat: "yy-mm-dd",
+      defaultDate: "{{latest_date}}",
+      onClose: function ( selectedDate ) {
+        $( '#end_date' ).datepicker("option", "minDate", selectedDate);
+      }
+    });
+
+    $( '#end_date' ).datepicker({
+      dateFormat: "yy-mm-dd",
+      defaultDate: "{{latest_date}}",
+      onClose: function ( selectedDate ) {
+        $( '#start_date' ).datepicker("option", "maxDate", selectedDate);
+      }
+    });
+  });
+</script>
+{% from "_formhelpers.html" import render_field %}
+<div>
+  {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+  {% endfor %}
+  <form action="{{url_for('addpayperiod')}}" method="post">
+    {{ render_field(form.hidden_tag) }}
+    {{ render_field(form.start_date, class='datepicker') }}
+    {{ render_field(form.end_date, class='datepicker') }}
+    <p><input type=submit value=Submit /></p>
+  </form>
+</div>

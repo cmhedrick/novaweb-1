@@ -1,0 +1,83 @@
+{% from "_formhelpers.html" import render_field %}
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <script type='text/javascript' src={{ url_for('static', filename='tristate.js') }}></script>
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+
+{% block content %}
+
+<h3> Users & Groups </h3>
+<div id="users_table">
+<table style="width: 100%" border="1">
+  <tr><th colspan="4">Users</th></tr>
+  <tr>
+    <th>Username</th>
+    <th>Full Name</th>
+    <th>E-mail</th>
+    <th>Active?</th>
+  </tr>
+  {% for user in users %}
+  <tr>
+    <td>{{user.username}}<a href="#" class="edit_user" data-id="{{user.id}}">(edit user icon)</a></td>
+    <td>{{user.name}}</td>
+    <td>{{user.email}}</td>
+    <td>{{user.active}}</td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td><a id="adduser" href="#" title="Add new user">Add new user</a></td>
+  </tr>
+</table>
+</div>
+
+<br />
+
+<br />
+<script type='text/javascript'>
+  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
+  var $adduser_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+  $adduser_dialog.dialog("option", 'title', "Add new user");
+  var ulink = "{{url_for('adduser')}}";
+  $("#adduser").click(function(event) {
+    event.preventDefault();
+    $adduser_dialog.load(ulink);
+    $adduser_dialog.dialog("open");
+  });
+
+  var $addgroup_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+  $addgroup_dialog.dialog("option", 'title', "Add new group");
+  var glink = "{{url_for('addgroup')}}";
+  $("#addgroup").click(function(event) {
+    event.preventDefault();
+    $addgroup_dialog.load(glink);
+    $addgroup_dialog.dialog("open");
+  });
+
+  $(document).ready(function() {
+    $('.edit_user').each(function(i, obj) {
+      var $dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+      $dialog.dialog('option', 'title', 'Edit User');
+      var link = "{{url_for('adduser')}}?user_id="+$(this).data("id");
+      $dialog.load(link)
+      $(obj).click(function(event) {
+        event.preventDefault();
+        $dialog.dialog("open");
+      });
+    });
+  });
+
+</script>
+
+<input type="submit" value="Submit" />
+</form>
+
+{% if not current_user.has_role('gp_edit') %}
+  <script type='text/javascript'>
+    $("form input:checkbox").attr("disabled", true);
+    $(".disable_overlay").show();
+  </script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,77 @@
+body, html{
+    height:100%;
+}
+
+body{
+    font-family: Ubuntu, sans-serif;
+    font-size:100%;
+    background-color:#fcfcfc;
+    margin:0px;
+}
+
+.content{
+    padding:10px;
+    height:100%;
+}
+
+.disable_overlay {
+  display:none;
+  position:relative;
+  background-color: darkgray;
+  opacity:.4;
+  width:16px;
+  float: left;
+  left:-15px;
+  height:15px;
+  top:1px";
+}
+
+.timesheet_date {
+  float: right;
+}
+
+.loginContainer{
+    width:400px;
+    height:500px;
+    margin:auto;
+    background:#fff;
+    box-shadow:0px 0px 15px #6e6e6e;
+}
+
+.loginLogo{
+    width:80%;
+    margin:50px auto;
+    display:block;
+    padding-top:50px;
+}
+
+.loginContainer form{
+    margin:10px;
+}
+
+.loginContainer form label{
+    min-width:150px;
+    display:inline-block;
+    margin:20px;
+}
+
+.loginContainer form a{
+    text-align:right;
+    font-size:14px;
+    float:right;
+    margin-top:-10px;
+}
+
+.loginContainer form input.login-submit-button{
+    margin:0px auto;
+    display:block;
+}
+
+.loginContainer form label.remember-me-label{
+    margin:0px;
+}
+
+.loginContainer form input.remember-me-checkbox{
+    margin:10px 0px 0px 140px;
+}
+/*END login page*/

@@ -1,0 +1,21 @@
+{% from "_formhelpers.html" import render_field %}
+<div>
+  {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+  {% endfor %}
+  <form action="{{url_for('modify_customer_users')}}?customer_id={{ request.args['customer_id'] }}" method="post">
+    <table>
+      <tr><th>Username</th><th>Active?</th><th>Billing Rate</th><th>Pay Rate</th></tr>
+      {% for user in user_matrix %}
+      {% set is_active = user_matrix[user].user_customer %}
+      <tr>
+        <td>{{ user_matrix[user].name }}</td>
+        <td><input type="checkbox" value="1" name="u{{ user }}" {% if is_active %}checked{% endif %} /></td>
+        <td><input type="text" value="{% if is_active %}{{ user_matrix[user].user_customer.bill_rate }}{% endif %}" name="u{{user}}_b"</td>
+        <td><input type="text" value="{% if is_active %}{{ user_matrix[user].user_customer.pay_rate }}{% endif %}" name="u{{user}}_p"</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p><input type=submit value=Submit /></p>
+  </form>
+</div>

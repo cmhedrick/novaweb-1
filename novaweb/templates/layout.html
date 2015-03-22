@@ -2,15 +2,27 @@
 <html>
   <head>
     {% block head %}
-      <script src="//code.jquery.com/jquery-1.11.0.min.js" type="text/javascript"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+      <script src="{{ url_for('static', filename='jquery-ui.js') }}"></script>
       <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-      <title>{% block title %}{% endblock %} - NOVAWEB</title>
+      <link rel="stylesheet" href="{{ url_for('static', filename='jquery-ui.css') }}" />
+      <title>{% block title %}{{ title }}{% endblock %} - NOVAWEB</title>
       {% endblock %}
   </head>
   <body>
     {% for message in get_flashed_messages() %}
       <div class="flash">{{ message }}</div>
     {% endfor %}
+    <div id="menubar">
+{% block menubar %}
+<ul class="menubar">
+  <li><a href="{{ url_for("groups_and_permissions") }}" title="Groups & Permissions">Groups & Permissions</a></li>
+  <li><a href="{{ url_for("user_management") }}" title="User Management">User Management</a></li>
+  <li><a href="{{ url_for("contracts") }}" title="Contracts">Contracts</a></li>
+  <li><a href="{{ url_for("payperiod") }}" title="Pay Periods">Pay Periods</a></li>
+  <li><a href="{{ url_for("timesheet") }}" title="Timesheet">Timesheet</a></li>
+</ul>
+{% endblock %}</div>
     <div id="content">{% block content %}{% endblock %}</div>
     <div id="footer">
       {% block footer %}
@@ -19,4 +31,3 @@
     </div>
   </body>
 </html>
-
