@@ -9,7 +9,13 @@ body{
     margin:0px;
 }
 
-.content{
+.page-wrap{
+    min-height:100%;
+    height:auto !important;
+    margin:0 auto -55px;
+}
+
+#content{
     padding:10px;
     height:100%;
 }
@@ -23,7 +29,7 @@ body{
   float: left;
   left:-15px;
   height:15px;
-  top:1px";
+  top:1px;
 }
 
 .timesheet_date {
@@ -34,8 +40,8 @@ body{
     width:400px;
     height:500px;
     margin:auto;
-    background:#fff;
     box-shadow:0px 0px 15px #6e6e6e;
+    background-color: rgba(212, 175, 55, 0.10);
 }
 
 .loginLogo{
@@ -47,12 +53,19 @@ body{
 
 .loginContainer form{
     margin:10px;
+    margin-top:-35px;
 }
 
 .loginContainer form label{
     min-width:150px;
     display:inline-block;
-    margin:20px;
+    color: #007912;
+    margin-bottom:5px;
+    font-size:18px;
+}
+
+.loginContainer form input{
+    margin-bottom:10px;
 }
 
 .loginContainer form a{
@@ -62,16 +75,106 @@ body{
     margin-top:-10px;
 }
 
-.loginContainer form input.login-submit-button{
+.loginContainer form input.submit-button{
     margin:0px auto;
     display:block;
 }
 
-.loginContainer form label.remember-me-label{
-    margin:0px;
-}
-
-.loginContainer form input.remember-me-checkbox{
-    margin:10px 0px 0px 140px;
+input[type="submit"]{
+    border-radius: 1em;
+    padding:10px 20px;
+    margin:5px 5px;
+    background-color: #007912;
+    color:#fcfcfc;
+    border:none;
+    font-weight:bold;
+    box-shadow: 3px 3px 8px #b8b8b8;
 }
 /*END login page*/
+
+/*header*/
+
+img.logo{
+    display:block;
+    float:left;
+    width:25%;
+    max-width:275px;
+    min-width:100px;
+    margin:5px;
+}
+
+#header{
+    height:120px;
+    width:100%;
+    background-color: rgba(212, 175, 55, 0.32);
+    box-shadow: 0px 3px 3px 1px #999;
+    z-index:50;
+    position:relative;
+}
+
+ul.menubar {
+    margin:0px;
+    position:absolute;
+    bottom:8px;
+    right: 0px;
+}
+ul.menubar li {
+    list-style:none;
+    display:inline;
+}
+
+ul.menubar li a {
+    color: #007912;
+    padding:8px 14px 8px 14px;
+    text-decoration:none;
+    border-left:1px solid #000000;
+    border-right:1px solid #000000;
+    border-top:1px solid #000000;
+}
+ul.menubar li a:hover {
+    color: rgba(0, 121, 18, 0.90);
+    background-color:rgba(212, 175, 55, 0.32);
+    border-color:#2f343a;
+}
+ul.menubar li a.active {
+    color: rgba(0, 121, 18, 0.38);
+    color: #91a2a6;
+    border:1px solid #727d85;
+    border-bottom: 1px solid #ffffff;
+}
+/*END header*/
+
+/*footer*/
+#footer{
+    min-width:400px;
+    max-width:650px;
+    height:40px;
+    background-color: rgba(212, 175, 55, 0.32);
+    margin:0px auto;
+    border-radius: 10px 10px 0px 0px;
+    z-index:500;
+}
+
+#footer p{
+    padding:10px 10px;
+    text-align:center;
+    color: #007912;
+}
+
+#footer a{
+    padding:0px 10px;
+    color:#000 !important;
+}
+/*END footer*/
+
+/*feedback styling*/
+.flash{
+    margin:20px;
+    padding:15px;
+    background-color:#7c2121;
+    border-radius:1em;
+    font-size:16px;
+    font-weight:600;
+    color: #fafafa;
+}
+/*END feedback styling*/

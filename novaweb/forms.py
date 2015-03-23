@@ -5,8 +5,8 @@ from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.ext.dateutil.fields import DateField
 
 class LoginForm(Form):
-  username = TextField('username', [validators.Required()])
-  password = PasswordField('password')
+  username = TextField('Username:', [validators.Required()])
+  password = PasswordField('Password:')
 
 class AddUser(Form):
   name = TextField('Name')
