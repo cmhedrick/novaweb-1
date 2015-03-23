@@ -52,8 +52,9 @@ body{
 }
 
 .loginContainer form{
-    margin:10px;
-    margin-top:-35px;
+    margin:20px;
+    padding-left: 10px;
+    margin-top:-25px;
 }
 
 .loginContainer form label{
@@ -66,6 +67,7 @@ body{
 
 .loginContainer form input{
     margin-bottom:10px;
+    margin-left:25px;
 }
 
 .loginContainer form a{
