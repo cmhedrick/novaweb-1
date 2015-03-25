@@ -6,6 +6,7 @@ from flask import current_app, render_template, request, url_for, flash, redirec
 from forms import *
 from dateutil import parser as dateparser
 from functools import wraps
+from collections import OrderedDict
 
 # User Loader Method. Don't touch.
 @login_manager.user_loader
@@ -340,7 +341,6 @@ def groups_and_permissions_handler():
         user.roles.append(role_map)
         print "new role_map: %s (about to add)" % role_map
         db.session.add(role_map)
-        print "just added!"
   for user in users:
     for group in groups:
       group_field = "u%s_g%s" % (user.id, group.id)
@@ -431,24 +431,24 @@ def get_timesheet(user, payperiod):
   return timesheet
 
 def get_logged_hours(timesheet):
-  logged_hours = {}
+  logged_hours = OrderedDict()
   start_date = timesheet.payperiod.start_date
   end_date = timesheet.payperiod.end_date
   current_date = start_date
   # if timesheet has been submitted (historical view), pull customers from timesheet object.
   if timesheet.submitted:
-    customers = [x.customer for x in timesheet.logged_hours.group_by('customer_id').all()]
+    customers = [x.customer for x in timesheet.logged_hours.group_by('customer_id').order_by('customer_id').all()]
   else:
     customers = [x.customer for x in timesheet.user.customers]
   for customer in customers:
-    logged_hours[customer.id] = {'name': customer.name, 'hours': []}
+    logged_hours[customer] = []
     while current_date <= end_date:
       logged_hour = LoggedHours.query.filter_by(timesheet=timesheet, customer=customer, day=current_date).first()
       if not logged_hour:
         logged_hour = LoggedHours(timesheet, customer, current_date, hours=0, note=None)
         db.session.add(logged_hour)
         db.session.commit()
-      logged_hours[customer.id]['hours'].append(logged_hour)
+      logged_hours[customer].append(logged_hour)
       current_date += datetime.timedelta(days=1)
     current_date = start_date
   return logged_hours
@@ -480,9 +480,9 @@ def timesheet():
     if has_errors:
       return redirect(url_for("timesheet"))
     conversion_error = False
-    for customer_id in logged_hours:
-      for logged_hour in logged_hours[customer_id]['hours']:
-        field = "u%s_c%s_%s" % (user.id, customer_id, logged_hour.day.strftime("y%y_m%m_d%d"))
+    for customer in logged_hours:
+      for logged_hour in logged_hours[customer]:
+        field = "u%s_c%s_%s" % (user.id, customer.id, logged_hour.day.strftime("y%y_m%m_d%d"))
         value = request.values[field]
         if value == "":
           value = 0
@@ -494,11 +494,6 @@ def timesheet():
             conversion_error = True
         logged_hour.hours = value
         db.session.commit()
-        # add business logic for hours here. (billing in half hour increments only? value % .5 != 0)
-        # if (value % 0.5) != 0:
-        #   conversion_error = True
-        #   value = 0
-        # So here we are. Objects exist, permissions have been validated, values have been cast, errors may have been checked. Let us persist. Remove "output" references laters.
     flash("Timesheet has been updated!")
     if conversion_error:
       flash("An error occurred converting one or more timesheet values. Please doublecheck your timesheet")
