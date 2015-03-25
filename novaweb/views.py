@@ -260,7 +260,7 @@ def contracts():
 @login_required
 @require_role("gp_view")
 def groups_and_permissions():
-  users = User.query.all()
+  users = User.query.filter_by(active=True).all()
   groups = Group.query.order_by('id').all()
   roles = Role.query.all()
   permissions = {}
@@ -270,13 +270,13 @@ def groups_and_permissions():
                  'gp': 'Users, Groups & Permissions',
                  'c': 'Contracts',
                  'pp': 'Pay Period',
+                 'ts': 'Timesheet',
                }
   user_group_matrix = {}
   for user in users:
-    if user.active:
-      user_group_matrix[user.id] = {'name': user, 'groups': {}}
-      for group in groups:
-        user_group_matrix[user.id]['groups'][group.id] = group in user.groups
+    user_group_matrix[user.id] = {'name': user, 'groups': {}}
+    for group in groups:
+      user_group_matrix[user.id]['groups'][group.id] = group in user.groups
   for prefix in prefixes:
     prefix_key = prefix
     if prefix in prefix_map:

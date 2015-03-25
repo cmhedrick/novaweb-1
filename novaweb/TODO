@@ -1,0 +1,4 @@
+Bugs:
+  -- Should require special permission to Submit a timesheet on behalf of another user.
+  -- Deactivating a user should remove that user from all contracts
+  -- A deactivated user should not show up in (modify users contracts) list.
