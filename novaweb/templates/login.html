@@ -2,14 +2,13 @@
 {% extends "layout.html" %}
 {% block title %} Login {% endblock %}
 {% block content %}
-
-<div id="login">
+<div class="loginContainer">
+    <img class="loginLogo" src="../static/images/GoldenNOVAlogo.svg" alt="NovaWeb Logo">
   <form action="" method="post">
     {{ render_field(form.hidden_tag) }}
     {{ render_field(form.username) }}
     {{ render_field(form.password) }}
-    <p><input type=submit value=Submit /></p>
+    <p><input type=submit class="submit-button" style="margin-top:20px;" value=Submit /></p>
   </form>
 </div>
-
 {% endblock %}

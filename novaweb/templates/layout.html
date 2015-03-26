@@ -10,23 +10,30 @@
       {% endblock %}
   </head>
   <body>
-    {% for message in get_flashed_messages() %}
+  <div class="page-wrap">
+      <div id="header">
+          <img class="logo" src="../static/images/GoldenNOVAlogo.svg" alt="NovaWeb Logo">
+          <div id="menubar">
+              {% block menubar %}
+              <ul class="menubar">
+                  <li><a href="{{ url_for("groups_and_permissions") }}" title="Groups & Permissions">Groups & Permissions</a></li>
+                  <li><a href="{{ url_for("user_management") }}" title="User Management">User Management</a></li>
+                  <li><a href="{{ url_for("contracts") }}" title="Contracts">Contracts</a></li>
+                  <li><a href="{{ url_for("payperiod") }}" title="Pay Periods">Pay Periods</a></li>
+                  <li><a href="{{ url_for("timesheet") }}" title="Timesheet">Timesheet</a></li>
+              </ul>
+              {% endblock %}</div>
+      </div>
+      {% for message in get_flashed_messages() %}
       <div class="flash">{{ message }}</div>
-    {% endfor %}
-    <div id="menubar">
-{% block menubar %}
-<ul class="menubar">
-  <li><a href="{{ url_for("groups_and_permissions") }}" title="Groups & Permissions">Groups & Permissions</a></li>
-  <li><a href="{{ url_for("user_management") }}" title="User Management">User Management</a></li>
-  <li><a href="{{ url_for("contracts") }}" title="Contracts">Contracts</a></li>
-  <li><a href="{{ url_for("payperiod") }}" title="Pay Periods">Pay Periods</a></li>
-  <li><a href="{{ url_for("timesheet") }}" title="Timesheet">Timesheet</a></li>
-</ul>
-{% endblock %}</div>
-    <div id="content">{% block content %}{% endblock %}</div>
+      {% endfor %}
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
+  </div>
     <div id="footer">
       {% block footer %}
-      &copy; Copyright 2015 by lawyers. Lawyers as far as the eye can see.
+        <p> &copy; Copyright 2015 by lawyers. Lawyers as far as the eye can see.</p>
       {% endblock %}
     </div>
   </body>
