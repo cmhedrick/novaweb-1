@@ -1,3 +1,4 @@
 *.pyc
 *.pyo
 default_settings.cfg
+.idea
