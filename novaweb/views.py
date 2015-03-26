@@ -6,6 +6,7 @@ from flask import current_app, render_template, request, url_for, flash, redirec
 from forms import *
 from dateutil import parser as dateparser
 from functools import wraps
+from collections import OrderedDict
 
 # User Loader Method. Don't touch.
 @login_manager.user_loader
@@ -260,7 +261,7 @@ def contracts():
 @login_required
 @require_role("gp_view")
 def groups_and_permissions():
-  users = User.query.all()
+  users = User.query.filter_by(active=True).all()
   groups = Group.query.order_by('id').all()
   roles = Role.query.all()
   permissions = {}
@@ -270,13 +271,13 @@ def groups_and_permissions():
                  'gp': 'Users, Groups & Permissions',
                  'c': 'Contracts',
                  'pp': 'Pay Period',
+                 'ts': 'Timesheet',
                }
   user_group_matrix = {}
   for user in users:
-    if user.active:
-      user_group_matrix[user.id] = {'name': user, 'groups': {}}
-      for group in groups:
-        user_group_matrix[user.id]['groups'][group.id] = group in user.groups
+    user_group_matrix[user.id] = {'name': user, 'groups': {}}
+    for group in groups:
+      user_group_matrix[user.id]['groups'][group.id] = group in user.groups
   for prefix in prefixes:
     prefix_key = prefix
     if prefix in prefix_map:
@@ -340,7 +341,6 @@ def groups_and_permissions_handler():
         user.roles.append(role_map)
         print "new role_map: %s (about to add)" % role_map
         db.session.add(role_map)
-        print "just added!"
   for user in users:
     for group in groups:
       group_field = "u%s_g%s" % (user.id, group.id)
@@ -391,23 +391,21 @@ def payperiod():
   return render_template("payperiod.html", payperiods=payperiods)
 
 
-# accepts payperiod_id and user_id
-@app.route("/timesheet", methods=['GET', 'POST'])
-@login_required
-@require_role("ts_view")
-def timesheet():
+# timesheet helper methods
+
+def process_timesheet_request():
   user = current_user
   if 'user_id' in request.values:
     if current_user.id != request.values['user_id']:
       if not current_user.has_role("ts_view_other"):
         flash("You do not have permission to see other users timesheets.")
-        return redirect(url_for("timesheet")) # maybe make manage users?
+        user = False
       else:
         user_id = request.values['user_id']
         user = User.query.filter_by(id=user_id).first()
         if user is None:
           flash("User not found.")
-          return redirect(url_for("timesheet")) # maybe make manage users?
+          user = False
   if 'payperiod_id' in request.values:
     get_current_payperiod = False
     payperiod = PayPeriod.query.get(request.values['payperiod_id'])
@@ -421,41 +419,58 @@ def timesheet():
     payperiod = PayPeriod.query.filter(PayPeriod.start_date < today, PayPeriod.end_date > today).first()
   if payperiod is None:
     flash("No payperiod is set up for today. Please set up the payroll cycle!")
-    return direct(url_for("payperiod"))
+    return redirect(url_for("payperiod"))
+  return (user, payperiod)
+
+def get_timesheet(user, payperiod):
   timesheet = Timesheet.query.filter_by(user=user, payperiod=payperiod).first()
   if timesheet is None:
     timesheet = Timesheet(user, payperiod)
     db.session.add(timesheet)
     db.session.commit()
-  start_date = payperiod.start_date
-  end_date = payperiod.end_date
+  return timesheet
+
+def get_logged_hours(timesheet):
+  logged_hours = OrderedDict()
+  start_date = timesheet.payperiod.start_date
+  end_date = timesheet.payperiod.end_date
   current_date = start_date
-  date_headers = payperiod.get_headers()
-  logged_hours = {}
   # if timesheet has been submitted (historical view), pull customers from timesheet object.
   if timesheet.submitted:
-    customers = [x.customer for x in timesheet.logged_hours.group_by('customer_id').all()]
+    customers = [x.customer for x in timesheet.logged_hours.group_by('customer_id').order_by('customer_id').all()]
   else:
-    customers = [x.customer for x in user.customers]
+    customers = [x.customer for x in timesheet.user.customers]
   for customer in customers:
-    logged_hours[customer.id] = {'name': customer.name, 'hours': []}
+    logged_hours[customer] = []
     while current_date <= end_date:
       logged_hour = LoggedHours.query.filter_by(timesheet=timesheet, customer=customer, day=current_date).first()
       if not logged_hour:
         logged_hour = LoggedHours(timesheet, customer, current_date, hours=0, note=None)
         db.session.add(logged_hour)
         db.session.commit()
-      logged_hours[customer.id]['hours'].append(logged_hour)
+      logged_hours[customer].append(logged_hour)
       current_date += datetime.timedelta(days=1)
     current_date = start_date
+  return logged_hours
+
+# accepts payperiod_id and user_id
+@app.route("/timesheet", methods=['GET', 'POST'])
+@login_required
+@require_role("ts_view")
+def timesheet():
+  user, payperiod = process_timesheet_request()
+  if not user or not payperiod:
+    return redirect(url_for("timesheet"))
+  timesheet = get_timesheet(user, payperiod)
+  logged_hours = get_logged_hours(timesheet)
+  date_headers = payperiod.get_headers()
   # u#_c#_y#_m#_d#
   if request.method == 'POST':
     has_errors = False
-    if 'user_id' in request.values:
-      if current_user.id != request.values['user_id']:
-        if not current_user.has_role("ts_edit_other"):
-          flash("You do not have permission to edit other timesheets")
-          has_errors = True
+    if current_user is not user:
+      if not current_user.has_role("ts_edit_other"):
+        flash("You do not have permission to edit other timesheets")
+        has_errors = True
     if not current_user.has_role("ts_edit"):
       flash("You do not have permission to edit timesheets!")
       has_errors = True
@@ -465,9 +480,9 @@ def timesheet():
     if has_errors:
       return redirect(url_for("timesheet"))
     conversion_error = False
-    for customer_id in logged_hours:
-      for logged_hour in logged_hours[customer_id]['hours']:
-        field = "u%s_c%s_%s" % (user.id, customer_id, logged_hour.day.strftime("y%y_m%m_d%d"))
+    for customer in logged_hours:
+      for logged_hour in logged_hours[customer]:
+        field = "u%s_c%s_%s" % (user.id, customer.id, logged_hour.day.strftime("y%y_m%m_d%d"))
         value = request.values[field]
         if value == "":
           value = 0
@@ -479,11 +494,6 @@ def timesheet():
             conversion_error = True
         logged_hour.hours = value
         db.session.commit()
-        # add business logic for hours here. (billing in half hour increments only? value % .5 != 0)
-        # if (value % 0.5) != 0:
-        #   conversion_error = True
-        #   value = 0
-        # So here we are. Objects exist, permissions have been validated, values have been cast, errors may have been checked. Let us persist. Remove "output" references laters.
     flash("Timesheet has been updated!")
     if conversion_error:
       flash("An error occurred converting one or more timesheet values. Please doublecheck your timesheet")

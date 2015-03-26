@@ -16,13 +16,13 @@
     </tr>
   </thead>
   <tbody>
-    {% for row in logged_hours %}
+    {% for customer in logged_hours %}
       <tr>
-        <td>{{ logged_hours[row]['name'] }}</td>
-        {% for col in logged_hours[row]['hours'] %}
+        <td>{{ customer.name }}</td>
+        {% for logged_hour in logged_hours[customer] %}
           {# u#_c#_y#_m#_d# #}
-          {% set field_name = "u"~user.id~"_c"~row~col.day.strftime("_y%y_m%m_d%d") %}
-          <td> <input type="text" id="{{ field_name }}" name="{{ field_name }}" value="{{col.hours}}" class="hours" maxlength="4" size="4" {% if timesheet.submitted %}disabled{% endif %} /> </td>
+          {% set field_name = "u"~user.id~"_c"~customer.id~logged_hour.day.strftime("_y%y_m%m_d%d") %}
+          <td> <input type="text" id="{{ field_name }}" name="{{ field_name }}" value="{{logged_hour.hours}}" class="hours" maxlength="4" size="4" {% if timesheet.submitted %}disabled{% endif %} /> </td>
         {% endfor %}
       </tr>
     {% endfor %}

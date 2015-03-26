@@ -180,3 +180,19 @@ ul.menubar li a.active {
     color: #fafafa;
 }
 /*END feedback styling*/
+
+.disable_overlay {
+  display:none;
+  position:relative;
+  background-color: darkgray;
+  opacity:.4;
+  width:16px;
+  float: left;
+  left:-15px;
+  height:15px;
+  top:1px";
+}
+
+.timesheet_date {
+  float: right;
+}
