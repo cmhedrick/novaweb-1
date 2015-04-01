@@ -222,9 +222,10 @@ def taskorder():
       return "You do no thave permission to edit other timesheets."
   form = TaskOrder(request.form, logged_hour)
   if request.method == "GET":
-    return render_template("taskorder.html", form=form, id=logged_hour.id)
+    return render_template("taskorder.html", form=form, logged_hour=logged_hour)
   if form.validate_on_submit():
-    print "Setting note to: %s" % request.values['note']
+    if logged_hour.timesheet.submitted:
+      return "You cannot update task orders of submitted timesheets."
     logged_hour.note = request.values['note']
     db.session.commit()
     return "Task order saved."

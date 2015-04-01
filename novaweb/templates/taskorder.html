@@ -3,11 +3,18 @@
   {% for message in get_flashed_messages() %}
     <div class="flash">{{ message }}</div>
   {% endfor %}
+  {% set id = logged_hour.id %}
   <form action="{{url_for('taskorder')}}" method="post" id="ts_form_{{id}}">
     {{ render_field(form.hidden_tag) }}
     {{ render_field(form.note) }}
     <p><input type=submit value=Submit /></p>
   </form>
+
+  {% if logged_hour.timesheet.submitted %}
+  <script type="text/javascript">
+    $( "textarea[name=note], input[type=submit]" ).attr("disabled", "disabled");
+  </script>
+  {% endif %}
 
   <script type="text/javascript">
     $( "#ts_form_{{id}}" ).submit(function(event) {
