@@ -27,3 +27,6 @@ class AddCustomer(Form):
 class AddPayPeriod(Form):
   start_date = DateField("Start Date")
   end_date = DateField("End Date")
+
+class TaskOrder(Form):
+  note = TextAreaField('Notes')

@@ -202,6 +202,37 @@ def addcustomer():
   return render_template("addcustomer.html", form=form)
 
 
+# An attempt at fancy ajax for saving information.
+@app.route("/taskorder", methods=['GET', 'POST'])
+@login_required
+@require_role("ts_edit")
+def taskorder():
+  invalid_request = False
+  if 'logged_hour_id' not in request.values:
+    invalid_request = True
+  else:
+    logged_hour = LoggedHours.query.get(request.values['logged_hour_id'])
+    if logged_hour is None:
+      invalid_request = True
+  if invalid_request:
+    return "Invalid Request: Missing or invalid logged hour ID."
+  user = logged_hour.timesheet.user
+  if current_user is not user:
+    if not current_user.has_role("ts_edit_other"):
+      return "You do no thave permission to edit other timesheets."
+  form = TaskOrder(request.form, logged_hour)
+  if request.method == "GET":
+    return render_template("taskorder.html", form=form, id=logged_hour.id)
+  if form.validate_on_submit():
+    print "Setting note to: %s" % request.values['note']
+    logged_hour.note = request.values['note']
+    db.session.commit()
+    return "Task order saved."
+  else:
+    return "An unknown error occurred. Please try again."
+  
+
+
 @app.route("/modify_customer_users", methods=['GET', 'POST'])
 @login_required
 @require_role("c_edit")
@@ -419,7 +450,6 @@ def process_timesheet_request():
     payperiod = PayPeriod.query.filter(PayPeriod.start_date <= today, PayPeriod.end_date >= today).first()
   if payperiod is None:
     flash("No payperiod is set up for today. Please set up the payroll cycle!")
-    #return redirect(url_for("payperiod"))
   return (user, payperiod)
 
 def get_timesheet(user, payperiod):
@@ -453,6 +483,7 @@ def get_logged_hours(timesheet):
     current_date = start_date
   return logged_hours
 
+
 # accepts payperiod_id and user_id
 @app.route("/timesheet", methods=['GET', 'POST'])
 @login_required
@@ -463,6 +494,7 @@ def timesheet():
     return redirect(url_for("timesheet"))
   if not payperiod:
     return redirect(url_for("payperiod"))
+  navigation = {'next': payperiod.get_next(), 'previous': payperiod.get_previous()}
   timesheet = get_timesheet(user, payperiod)
   logged_hours = get_logged_hours(timesheet)
   date_headers = payperiod.get_headers()
@@ -504,7 +536,7 @@ def timesheet():
         timesheet.submitted = True
         flash("Timesheet successfully submitted. Now pending approval.")
   db.session.commit()
-  return render_template("timesheet.html", logged_hours=logged_hours, payperiod=payperiod, user=user, date_headers=date_headers, timesheet=timesheet)
+  return render_template("timesheet.html", logged_hours=logged_hours, payperiod=payperiod, navigation=navigation, user=user, date_headers=date_headers, timesheet=timesheet)
 
 @app.route('/user_management')
 @login_required

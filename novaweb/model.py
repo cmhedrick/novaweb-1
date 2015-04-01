@@ -184,6 +184,12 @@ class PayPeriod(db.Model):
       current_date += datetime.timedelta(days=1)
     return date_headers
 
+  def get_next(self):
+    return PayPeriod.query.filter(PayPeriod.start_date > self.end_date).order_by(PayPeriod.start_date).first()
+
+  def get_previous(self):
+    return PayPeriod.query.filter(PayPeriod.end_date < self.start_date).order_by(PayPeriod.start_date.desc()).first()
+
 
 class Timesheet(db.Model):
   id = db.Column(db.Integer, primary_key=True)

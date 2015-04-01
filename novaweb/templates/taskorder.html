@@ -1,0 +1,30 @@
+{% from "_formhelpers.html" import render_field %}
+<div>
+  {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+  {% endfor %}
+  <form action="{{url_for('taskorder')}}" method="post" id="ts_form_{{id}}">
+    {{ render_field(form.hidden_tag) }}
+    {{ render_field(form.note) }}
+    <p><input type=submit value=Submit /></p>
+  </form>
+
+  <script type="text/javascript">
+    $( "#ts_form_{{id}}" ).submit(function(event) {
+      event.preventDefault();
+      var $form = $( this ),
+        note = $form.find( "textarea[name=note]" ).val(),
+        url = $form.attr( "action" ),
+        csrf_token = $form.find( "input[name=csrf_token]" ).val();
+
+      var posting = $.post( url, { note: note, logged_hour_id: {{id}}, csrf_token: csrf_token } );
+      posting.done(function( data ) {
+        $( "<div class='flash'>" + data + "</div>" ).insertBefore( "#content" );
+        setTimeout(function() {
+          $( ".flash" ).fadeOut(400, function(){ $(this).remove(); });
+        }, 4000);
+        $form.closest('.ui-dialog-content').dialog("close");
+      });
+  });
+  </script>
+</div>

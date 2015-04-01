@@ -36,6 +36,14 @@ body{
   float: right;
 }
 
+#ts_nav_previous {
+  float: left;
+}
+
+#ts_nav_next {
+  float: right;
+}
+
 .loginContainer{
     width:400px;
     height:500px;

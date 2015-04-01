@@ -27,6 +27,11 @@
       {% for message in get_flashed_messages() %}
       <div class="flash">{{ message }}</div>
       {% endfor %}
+      <script type="text/javascript">
+        setTimeout(function() {
+          $('.flash').fadeOut(400, function(){ $(this).remove(); });
+        }, 4000);
+      </script>
     <div id="content">
         {% block content %}{% endblock %}
     </div>

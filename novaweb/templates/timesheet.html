@@ -4,8 +4,17 @@
 {% block content %}
 
 <h3> Timesheet for {% if user.name %}{{ user.name }} {% else %}{{user.username}}{% endif %}<span class="timesheet_date">{{ payperiod.start_date.date() }} - {{ payperiod.end_date.date() }}</span></h3>
+<h2>
+  {% if navigation['previous'] %}
+    <span id="ts_nav_previous"><a href="{{ url_for('timesheet', payperiod_id=navigation['previous'].id) }}">&lt;&lt;&lt;</a></span>
+  {% endif %}
 
-<form action="" method="post">
+  {% if navigation['next'] %}
+    <span id="ts_nav_next"><a href="{{ url_for('timesheet', payperiod_id=navigation['next'].id) }}">&gt;&gt;&gt;</a></span>
+  {% endif %}
+</h2>
+<br /><br />
+<form action="" method="post" style="clear: both;">
 <table style="width: 100%" border="1">
   <thead>
     <tr>
@@ -22,7 +31,7 @@
         {% for logged_hour in logged_hours[customer] %}
           {# u#_c#_y#_m#_d# #}
           {% set field_name = "u"~user.id~"_c"~customer.id~logged_hour.day.strftime("_y%y_m%m_d%d") %}
-          <td> <input type="text" id="{{ field_name }}" name="{{ field_name }}" value="{{logged_hour.hours}}" class="hours" maxlength="4" size="4" {% if timesheet.submitted %}disabled{% endif %} /> </td>
+          <td> <input type="text" id="{{ field_name }}" name="{{ field_name }}" value="{{logged_hour.hours}}" class="hours" maxlength="4" size="4" {% if timesheet.submitted %}disabled{% endif %} /><a href="#" data-id="{{logged_hour.id}}" class="ts_taskorder"><img src="{{url_for('static', filename='taskorder.png')}}" width="16" height="16" /></a></td>
         {% endfor %}
       </tr>
     {% endfor %}
@@ -33,5 +42,21 @@
 <input type="submit" value="Submit" name="submit" />
 
 </form>
+
+<script type="text/javascript">
+  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
+  $(document).ready(function() {
+    $('.ts_taskorder').each(function(i, obj) {
+      var $ts_taskorder_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+      $ts_taskorder_dialog.dialog('option', 'title', "Enter Notes");
+      $(obj).click(function(event) {
+        var link = "{{url_for('taskorder')}}?logged_hour_id="+$(this).data("id");
+        $ts_taskorder_dialog.load(link)
+        event.preventDefault();
+        $ts_taskorder_dialog.dialog("open");
+      });
+    });
+  });
+</script>
 
 {% endblock %}
