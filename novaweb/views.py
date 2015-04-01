@@ -416,10 +416,10 @@ def process_timesheet_request():
     get_current_payperiod = True
   if get_current_payperiod:
     today = datetime.date.today()
-    payperiod = PayPeriod.query.filter(PayPeriod.start_date < today, PayPeriod.end_date > today).first()
+    payperiod = PayPeriod.query.filter(PayPeriod.start_date <= today, PayPeriod.end_date >= today).first()
   if payperiod is None:
     flash("No payperiod is set up for today. Please set up the payroll cycle!")
-    return redirect(url_for("payperiod"))
+    #return redirect(url_for("payperiod"))
   return (user, payperiod)
 
 def get_timesheet(user, payperiod):
@@ -459,8 +459,10 @@ def get_logged_hours(timesheet):
 @require_role("ts_view")
 def timesheet():
   user, payperiod = process_timesheet_request()
-  if not user or not payperiod:
+  if not user:
     return redirect(url_for("timesheet"))
+  if not payperiod:
+    return redirect(url_for("payperiod"))
   timesheet = get_timesheet(user, payperiod)
   logged_hours = get_logged_hours(timesheet)
   date_headers = payperiod.get_headers()
