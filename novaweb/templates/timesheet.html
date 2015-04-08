@@ -1,9 +1,20 @@
 {% from "_formhelpers.html" import render_field %}
+{% from "_utils.html" import render_name %}
 {% extends "layout.html" %}
 
 {% block content %}
 
-<h3> Timesheet for {% if user.name %}{{ user.name }} {% else %}{{user.username}}{% endif %}<span class="timesheet_date">{{ payperiod.start_date.date() }} - {{ payperiod.end_date.date() }}</span></h3>
+<h3> Timesheet for {{ render_name(user) }}
+{% if timesheet.submitted %}
+  {% if timesheet.approved %}
+    (Submitted, Approved)
+  {% else %}
+    (Submitted, Pending Approval)
+  {% endif %}
+{% endif %}
+  <span class="timesheet_date">{{ payperiod.start_date.date() }} - {{ payperiod.end_date.date() }}</span>
+</h3>
+
 <h2>
   {% if navigation['previous'] %}
     <span id="ts_nav_previous"><a href="{{ url_for('timesheet', payperiod_id=navigation['previous'].id) }}">&lt;&lt;&lt;</a></span>
@@ -38,8 +49,10 @@
   </tbody>
 </table>
 
-<input type="submit" value="Save" name="save" />
-<input type="submit" value="Submit" name="submit" />
+{% if not timesheet.submitted %}
+  <input type="submit" value="Save" name="save" />
+  <input type="submit" value="Submit" name="submit" />
+{% endif %}
 
 </form>
 

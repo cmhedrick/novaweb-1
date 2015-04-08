@@ -31,7 +31,7 @@ def login():
     if user:
       if user.check_password(password):
         login_user(user)
-        return redirect(request.args.get("next") or url_for("index"))
+        return redirect(request.args.get("next") or url_for("timesheet"))
     flash("Unsuccessful login attempt.")
   return render_template("login.html", form=form)
 
@@ -250,9 +250,9 @@ def modify_customer_users():
     user_matrix = {}
     for user in users:
       user_customer = UsersCustomers.query.filter_by(user_id=user.id, customer_id=customer.id).first()
-      if user.name is not None: username = user.name
-      else: username = user.username
-      user_matrix[user.id] = {'name': username, 'user_customer': user_customer}
+      #if user.name is not None: username = user.name
+      #else: username = user.username
+      user_matrix[user.id] = {'user': user, 'user_customer': user_customer}
     return render_template("modify_customer_users.html", user_matrix=user_matrix)
   else:
     # Handle POST
@@ -304,6 +304,7 @@ def groups_and_permissions():
                  'c': 'Contracts',
                  'pp': 'Pay Period',
                  'ts': 'Timesheet',
+                 'ap': 'Approvals',
                }
   user_group_matrix = {}
   for user in users:
@@ -425,6 +426,11 @@ def payperiod():
 
 # timesheet helper methods
 
+def get_current_payperiod():
+  today = datetime.date.today()
+  payperiod = PayPeriod.query.filter(PayPeriod.start_date <= today, PayPeriod.end_date >= today).first()
+  return payperiod
+
 def process_timesheet_request():
   user = current_user
   if 'user_id' in request.values:
@@ -439,16 +445,15 @@ def process_timesheet_request():
           flash("User not found.")
           user = False
   if 'payperiod_id' in request.values:
-    get_current_payperiod = False
+    get_payperiod = False
     payperiod = PayPeriod.query.get(request.values['payperiod_id'])
     if payperiod is None:
       flash("Invalid payperiod specified. Displaying current payperiod.")
-      get_current_payperiod = True
+      get_payperiod = True
   else:
-    get_current_payperiod = True
-  if get_current_payperiod:
-    today = datetime.date.today()
-    payperiod = PayPeriod.query.filter(PayPeriod.start_date <= today, PayPeriod.end_date >= today).first()
+    get_payperiod = True
+  if get_payperiod:
+    payperiod = get_current_payperiod()
   if payperiod is None:
     flash("No payperiod is set up for today. Please set up the payroll cycle!")
   return (user, payperiod)
@@ -484,6 +489,53 @@ def get_logged_hours(timesheet):
     current_date = start_date
   return logged_hours
 
+def get_timesheet_approvals():
+  timesheet_model = {}
+  customers_model = {}
+  payperiod = get_current_payperiod()
+  timesheets = Timesheet.query.filter_by(payperiod=payperiod, submitted=True, approved=False)
+  for timesheet in timesheets:
+    customers = [x.customer for x in timesheet.logged_hours.group_by('customer_id').order_by('customer_id').all()]
+    for customer in customers:
+      logged_hours = LoggedHours.query.filter_by(timesheet=timesheet, customer=customer).all()
+      hours = sum([x.hours for x in logged_hours])
+      pay_rate = UsersCustomers.query.filter_by(user_id=timesheet.user.id, customer_id=customer.id).first().pay_rate
+      total = hours*pay_rate
+      customers_model[customer.id] = {'customer': customer, 'hours': hours, 'rate': pay_rate, 'total': total}
+    grand_total = sum( [x['total'] for x in customers_model.values()] )
+    timesheet_model[timesheet.id] = { 'timesheet': timesheet, 'customers': customers_model, 'total': grand_total }
+  return timesheet_model
+
+def process_timesheet_approvals(request, timesheet_model):
+  if not current_user.has_role("ts_approve_other"):
+    flash("You do not have permission to approve this timesheet.")
+    return False
+  else:
+    for timesheet_id in timesheet_model:
+      token = "approve_ts_%s" % timesheet_id
+      if token in request.values:
+        timesheet = Timesheet.query.get(timesheet_id)
+        timesheet.approved = True
+        db.session.commit()
+        flash("Timesheet for %s approved." % timesheet.user.get_name())
+      token = "reject_ts_%s" % timesheet_id
+      if token in request.values:
+        timesheet = Timesheet.query.get(timesheet_id)
+        timesheet.approved = False
+        timesheet.submitted = False
+        db.session.commit()
+        flash("Timesheet for %s rejected." % timesheet.user.get_name())
+
+@app.route("/approvals", methods=['GET', 'POST'])
+@login_required
+@require_role("ap_view")
+def approvals():
+  timesheet_model = get_timesheet_approvals()
+  if request.method == 'POST':
+    process_timesheet_approvals(request, timesheet_model)
+    return redirect(url_for("approvals"))
+  return render_template("approvals.html", timesheet_model=timesheet_model)
+  
 
 # accepts payperiod_id and user_id
 @app.route("/timesheet", methods=['GET', 'POST'])
@@ -535,7 +587,11 @@ def timesheet():
     else:
       if 'submit' in request.values:
         timesheet.submitted = True
-        flash("Timesheet successfully submitted. Now pending approval.")
+        if current_user.has_role("ts_approve"):
+          timesheet.approved = True
+          flash("Timesheet successfully submitted and automatically approved.")
+        else:
+          flash("Timesheet successfully submitted. Now pending approval.")
   db.session.commit()
   return render_template("timesheet.html", logged_hours=logged_hours, payperiod=payperiod, navigation=navigation, user=user, date_headers=date_headers, timesheet=timesheet)
 
@@ -551,7 +607,7 @@ def user_management():
 @app.route('/')
 @login_required
 def index():
-  return render_template("index.html")
+  return redirect(url_for("timesheet"))
 
 
 @app.route('/load_permission_groups')
@@ -559,5 +615,7 @@ def index():
 @require_role("ts_view_other")
 @require_role("ts_edit_other")
 @require_role("ts_edit")
+@require_role("ts_approve")
+@require_role("ts_approve_other")
 def load_permission_groups():
   return "You have reached here in err."

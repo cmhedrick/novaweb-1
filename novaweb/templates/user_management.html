@@ -70,9 +70,6 @@
 
 </script>
 
-<input type="submit" value="Submit" />
-</form>
-
 {% if not current_user.has_role('gp_edit') %}
   <script type='text/javascript'>
     $("form input:checkbox").attr("disabled", true);

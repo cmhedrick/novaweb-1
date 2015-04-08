@@ -1,0 +1,7 @@
+{% macro render_name(user) %}
+  {% if user.name %}
+    {{ user.name }}
+  {% else %}
+    {{ user.username }}
+  {% endif %}
+{% endmacro %}

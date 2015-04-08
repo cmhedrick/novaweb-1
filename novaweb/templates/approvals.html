@@ -1,0 +1,44 @@
+{% from "_formhelpers.html" import render_field %}
+{% from "_utils.html" import render_name %}
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <script type='text/javascript' src={{ url_for('static', filename='tristate.js') }}></script>
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+
+{% block content %}
+
+<script type="text/javascript">
+  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
+</script>
+
+{% if timesheet_model %}
+<form action="" method="post">
+  <div>
+    <ul class="approvals_ts">
+    {% for item in timesheet_model.values() %}
+        <li>{{ render_name(item['timesheet'].user) }}</li>
+        <table>
+          <tr><th>Customer Name</th><th>Hours Worked</th><th>Pay Rate</th><th>Total</th></tr>
+        {% for customer_item in item['customers'].values() %}
+            <tr>
+              <td>{{ customer_item['customer'].name }}</td>
+              <td>{{ customer_item['hours'] }}</td>
+              <td>{{ customer_item['rate'] }}</td>
+              <td>${{ customer_item['total'] }}</td>
+            </tr>
+        {% endfor %}
+            <tr><td></td><td></td><td></td><td class='ts_grand_total'>${{ item['total'] }}</td></tr>
+        </table>
+        <input type="submit" name="approve_ts_{{ item['timesheet'].id }}" value="Approve!" />
+        <input type="submit" name="reject_ts_{{ item['timesheet'].id }}" value="Reject!" />
+    {% endfor %}
+    </ul>
+  </div>
+</form>
+{% else %}
+  <div><p>No timesheets are pending approval for this pay period.</p></div>
+{% endif %}
+
+{% endblock %}

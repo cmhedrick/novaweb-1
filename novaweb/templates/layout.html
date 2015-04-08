@@ -13,16 +13,21 @@
   <div class="page-wrap">
       <div id="header">
           <img class="logo" src="../static/images/GoldenNOVAlogo.svg" alt="NovaWeb Logo">
-          <div id="menubar">
-              {% block menubar %}
-              <ul class="menubar">
+          {% block menubar %}
+            {% if current_user.is_authenticated() %}
+              <div id="menubar">
+                <ul class="menubar">
+                  <li><a href="{{ url_for("timesheet") }}" title="Timesheet">Timesheet</a></li>
                   <li><a href="{{ url_for("groups_and_permissions") }}" title="Groups & Permissions">Groups & Permissions</a></li>
                   <li><a href="{{ url_for("user_management") }}" title="User Management">User Management</a></li>
                   <li><a href="{{ url_for("contracts") }}" title="Contracts">Contracts</a></li>
                   <li><a href="{{ url_for("payperiod") }}" title="Pay Periods">Pay Periods</a></li>
-                  <li><a href="{{ url_for("timesheet") }}" title="Timesheet">Timesheet</a></li>
-              </ul>
-              {% endblock %}</div>
+                  <li><a href="{{ url_for("approvals") }}" title="Approvals">Approvals</a></li>
+                  <li><a href="{{ url_for("logout") }}" title="logout">Logout</a></li>
+                </ul>
+              </div>
+            {% endif %}
+          {% endblock %}
       </div>
       {% for message in get_flashed_messages() %}
       <div class="flash">{{ message }}</div>
@@ -38,8 +43,13 @@
   </div>
     <div id="footer">
       {% block footer %}
-        <p> &copy; Copyright 2015 by lawyers. Lawyers as far as the eye can see.</p>
+        <p> &copy; Copyright 2015 - NOVA Web Development - All rights reserved.</p>
       {% endblock %}
     </div>
+    <script text="text/javascript">
+      var dteNow = new Date();
+      var intYear = dteNow.getFullYear();
+      $( "#footer p" ).replaceWith("<p>&copy; Copyright " + intYear + " - NOVA Web Development - All rights reserved.</p>");
+    </script>
   </body>
 </html>

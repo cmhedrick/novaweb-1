@@ -113,6 +113,12 @@ class User(db.Model, UserMixin):
       hours = [0]
     return sum(hours)
 
+  def get_name(self):
+    if self.name:
+      return self.name
+    else:
+      return self.username
+
 class Role(db.Model, RoleMixin):
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String(255), unique=True)
@@ -234,6 +240,9 @@ class LoggedHours(db.Model):
     self.day = day
     self.hours = hours
     self.note = note
+
+  def __repr__(self):
+    return "User: %s Customer: %s Hours: %s" % (self.timesheet.user.username, self.customer.name, self.hours)
 
 class Invoice(db.Model):
   id = db.Column(db.Integer, primary_key=True)
