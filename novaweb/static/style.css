@@ -188,3 +188,25 @@ ul.menubar li a.active {
     color: #fafafa;
 }
 /*END feedback styling*/
+
+table, th, td {
+    border: 1px solid black;
+    background-color: rgba(212, 175, 55, 0.14);
+}
+
+td {
+    text-align: center;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+h3 {
+    color: #007912;
+}
+
+a {
+    text-decoration: none;
+}
