@@ -3,9 +3,22 @@ Bugs:
   -- Deactivating a user should remove that user from all contracts
   -- A deactivated user should not show up in (modify users contracts) list.
 
+
 TODO:
-  -- View All Timesheets
-  -- Generate Invoices (and email)
   -- Email Timesheet Reminders
-  -- Report on hours (payroll view)
   -- Audit Logs
+  -- Add ability to specify which payperiod you want to view in def payperiod() (currently set to "oldest one outstanding")
+    -- Include navigation to go backwards and forwards(up to current only)
+  -- create invoice pdf
+
+NEATO EXTRAS:
+  -- Only make flash() disappear if overwritten by .js
+  -- default flash() should "roll up" into hidden bar ( +------------------ ) instead
+
+
+Styling Todo Requests:
+payperiod_content li -> inline, add js to show/hide alternate divs
+
+
+Currently Working on :
+payperiod -> contracts view and processing

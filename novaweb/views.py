@@ -1,12 +1,14 @@
 import datetime
+import os
 from novaweb import app, login_manager
 from flask.ext.login import login_required, login_user, logout_user, current_user
 from novaweb.model import *
-from flask import current_app, render_template, request, url_for, flash, redirect, jsonify 
+from flask import current_app, render_template, request, url_for, flash, redirect, jsonify, send_file
 from forms import *
 from dateutil import parser as dateparser
 from functools import wraps
 from collections import OrderedDict
+from pdfs import create_pdf
 
 # User Loader Method. Don't touch.
 @login_manager.user_loader
@@ -416,13 +418,186 @@ def addpayperiod():
     return redirect(url_for("payperiod"))
   return render_template("addpayperiod.html", form=form, latest_date=latest_date)  
 
-@app.route("/payperiod", methods=['GET'])
+@app.route("/manage_payperiods", methods=['GET'])
+@login_required
+@require_role("pp_manage")
+def manage_payperiods():
+  payperiods = PayPeriod.query.all()
+  return render_template("manage_payperiods.html", payperiods=payperiods)
+
+# This gets the earliest "unfinished" timesheet.
+# should not go past current timesheet
+def get_last_payperiod():
+  current_payperiod = get_current_payperiod()
+  payperiods = PayPeriod.query.filter(PayPeriod.end_date <= current_payperiod.end_date).order_by("start_date").all()
+  for payperiod in payperiods:
+    if not payperiod.payroll_processed or not payperiod.invoices_processed:
+      return payperiod
+  return current_payperiod
+
+
+@app.route("/payperiod", methods=['GET', 'POST'])
 @login_required
 @require_role("pp_view")
 def payperiod():
-  payperiods = PayPeriod.query.all()
-  return render_template("payperiod.html", payperiods=payperiods)
+  processable = {}
+  payperiod = get_last_payperiod()
+  users = User.query.filter_by(active=True).all()
+  processable['payroll'] = True
+  for timesheet in payperiod.timesheets.all():
+    if (not timesheet.submitted or not timesheet.approved) and timesheet.user.active:
+      processable['payroll'] = False
+  if payperiod.payroll_processed:
+    processable['payroll'] = False
+  customer_model = {}
+  customers = Customer.query.all()
+  for customer in customers:
+    invoice = Invoice.query.filter_by(customer=customer, payperiod=payperiod).first()
+    customer_model[customer.id] = {'customer': customer, 'invoice': invoice}
+  if request.method == 'POST':
+    if not payperiod.payroll_processed and not payperiod.invoices_processed:
+      timesheet_model = [x.id for x in payperiod.timesheets.all()]
+      process_timesheet_approvals(request, timesheet_model)
+    if processable['payroll']:
+      if 'generate_payroll' in request.values:
+        if payperiod.payroll_processed:
+          flash("Invalid request. Payroll already processed.")
+        else:
+          pdf = create_pdf(render_template("payroll_report.html", users=users, payperiod=payperiod))
+          filename = "/payroll_%s_%s.pdf" % (payperiod.start_date.strftime("%m%d%y"), payperiod.id)
+          with open(app.config['PDF_DIR']+filename, 'w') as pdfout:
+            pdfout.write(pdf.getvalue())
+          payperiod.payroll_processed = True
+          db.session.commit()
+  # handle generation of invoice
+  if 'generate_invoice' in request.values:
+    generate_invoice = True
+    if request.values['generate_invoice'] == "all":
+      customers = Customer.query.all()
+    else:
+      customers = [Customer.query.get(request.values['generate_invoice'])]
+    if not len(customers) > 0:
+      flash("Invalid customer")
+      generate_invoice = False
+    if generate_invoice:
+      print customers
+      for customer in customers:
+        if customer.hours_worked(payperiod)['total_billable'] > 0:
+          invoice = Invoice.query.filter_by(customer=customer, payperiod=payperiod).first()
+          if not invoice:
+            invoice = Invoice(customer, payperiod)
+            db.session.add(invoice)
+            db.session.commit()
+          invoice.update_invoice()
+          invoice.generate_invoice()
+          db.session.commit()
+          flash("Invoice for customer %s updated." % customer.name)
+    return redirect(url_for("payperiod"))
+  return render_template("payperiods.html", users=users, payperiod=payperiod, processable=processable, customer_model=customer_model)
 
+@app.route("/view_payroll", methods=['GET', 'POST'])
+@login_required
+@require_role("pp_payroll_view")
+def view_payroll():
+  if 'payperiod_id' not in request.values:
+    flash("Invalid request.")
+  payperiod = PayPeriod.query.get(request.values['payperiod_id'])
+  if not payperiod:
+    flash("Invalid payperiod.")
+  filename = "/payroll_%s_%s.pdf" % (payperiod.start_date.strftime("%m%d%y"), payperiod.id)
+  if os.path.isfile(app.config['PDF_DIR']+filename):
+    return send_file(app.config['PDF_DIR']+filename)
+  else:
+    flash("File not found!")
+    return redirect(url_for("payperiod"))
+
+@app.route("/send_invoice", methods=['GET'])
+@login_required
+@require_role("pp_invoice_send")
+def send_invoice():
+  invoices = []
+  fail = False
+  if 'payperiod' not in request.values or 'invoice' not in request.values:
+    flash("Invalid request.")
+    fail = True
+  payperiod = PayPeriod.query.get(request.values['payperiod'])
+  if not payperiod:
+    flash("Invalid payperiod.")
+    fail = True
+  if not payperiod.payroll_processed:
+    flash("You must first process payroll to send invoices.")
+    fail = True
+  if request.values['invoice'] == "all":
+    for invoice in Invoice.query.filter_by(payperiod=payperiod).all():
+      if not invoice.sent:
+        if invoice.total_billable > 0:
+          invoices.append(invoice)
+  else:
+    invoices.append(Invoice.query.get(request.values['invoice']))
+  if not len(invoices) > 0:
+    flash("No unsent invoices found.")
+    fail = True
+  if not fail:
+    for invoice in invoices:
+      output = invoice.send_invoice()
+      flash(output)
+  complete = True
+  for invoice in Invoice.query.filter_by(payperiod=payperiod).all():
+    if invoice.total_billable > 0:
+      if not invoice.sent:
+        complete = False
+  if complete:
+    payperiod.invoices_processed = True
+    db.session.commit()
+  return redirect(url_for("payperiod"))
+
+@app.route("/view_invoice", methods=['GET'])
+@login_required
+@require_role("pp_invoice_view")
+def view_invoice():
+  fail = False
+  if 'payperiod' not in request.values or 'invoice' not in request.values:
+    flash("Invalid request.")
+    fail = True
+  payperiod = PayPeriod.query.get(request.values['payperiod'])
+  if not payperiod:
+    flash("Invalid payperiod.")
+    fail = True
+  invoice = Invoice.query.get(request.values['invoice'])
+  if not invoice:
+    flash("Invalid invoice.")
+    fail = True
+  if not fail:
+    if os.path.isfile(invoice.invoice_pdf):
+      return send_file(invoice.invoice_pdf)
+    else:
+      flash("File not found!")
+  return redirect(url_for("payperiod"))
+  
+
+@app.route("/debug", methods=['GET'])
+def debug():
+  return render_template("payroll_report.html")
+
+@app.route("/timesheet_history", methods=['GET'])
+@login_required
+def timesheet_history():
+# ts_view_other and ts_view
+  user = current_user
+  if 'user_id' in request.values:
+    if current_user.id != request.values['user_id']:
+      if not current_user.has_role("ts_view_other"):
+        flash("You do not have permission to view other users historical timesheets.")
+        user = False
+      else:
+        user_id = request.values['user_id']
+        user = User.query.filter_by(id=user_id).first()
+        if user is None:
+          flash("User not found.")
+          user = False
+  timesheets = user.timesheets.all()
+  timesheets = sorted(timesheets, key=lambda sheet: sheet.payperiod.start_date)
+  return render_template("timesheet_history.html", user=user, timesheets=timesheets)
 
 # timesheet helper methods
 
@@ -430,6 +605,7 @@ def get_current_payperiod():
   today = datetime.date.today()
   payperiod = PayPeriod.query.filter(PayPeriod.start_date <= today, PayPeriod.end_date >= today).first()
   return payperiod
+
 
 def process_timesheet_request():
   user = current_user
@@ -466,6 +642,7 @@ def get_timesheet(user, payperiod):
     db.session.commit()
   return timesheet
 
+
 def get_logged_hours(timesheet):
   logged_hours = OrderedDict()
   start_date = timesheet.payperiod.start_date
@@ -492,7 +669,7 @@ def get_logged_hours(timesheet):
 def get_timesheet_approvals():
   timesheet_model = {}
   customers_model = {}
-  payperiod = get_current_payperiod()
+  payperiod = get_last_payperiod()
   timesheets = Timesheet.query.filter_by(payperiod=payperiod, submitted=True, approved=False)
   for timesheet in timesheets:
     customers = [x.customer for x in timesheet.logged_hours.group_by('customer_id').order_by('customer_id').all()]
@@ -508,7 +685,7 @@ def get_timesheet_approvals():
 
 def process_timesheet_approvals(request, timesheet_model):
   if not current_user.has_role("ts_approve_other"):
-    flash("You do not have permission to approve this timesheet.")
+    flash("You do not have permission to approve/reject this timesheet.")
     return False
   else:
     for timesheet_id in timesheet_model:
@@ -531,10 +708,11 @@ def process_timesheet_approvals(request, timesheet_model):
 @require_role("ap_view")
 def approvals():
   timesheet_model = get_timesheet_approvals()
+  payperiod = get_last_payperiod()
   if request.method == 'POST':
     process_timesheet_approvals(request, timesheet_model)
     return redirect(url_for("approvals"))
-  return render_template("approvals.html", timesheet_model=timesheet_model)
+  return render_template("approvals.html", timesheet_model=timesheet_model, payperiod=payperiod)
   
 
 # accepts payperiod_id and user_id
@@ -608,7 +786,6 @@ def user_management():
 @login_required
 def index():
   return redirect(url_for("timesheet"))
-
 
 @app.route('/load_permission_groups')
 @login_required

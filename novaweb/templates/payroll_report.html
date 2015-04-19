@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+<style>
+/* insert style here */
+table, th, td {
+    border: 1px solid black;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    line-height: 50%;
+}
+
+td {
+    text-align: center;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.timesheet_date {
+  float: right;
+}
+</style>
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+{% block menubar %}
+{% endblock %}
+
+{% block content %}
+
+<h3>
+  <span class="timesheet_date">{{ payperiod.start_date.date() }} - {{ payperiod.end_date.date() }}</span>
+</h3>
+
+      <table>
+        <tr>
+          <td> User </td>
+          <td> Hours worked </td>
+          <td> Total Pay </td>
+        </tr>
+      {% for user in users %}
+        <tr>
+          <td>{{ user.get_name() }}</td>
+          <td>{{ user.hours_worked(payperiod)['total_hours'] }} </td>
+          <td>${{ user.hours_worked(payperiod)['total_pay'] }}</td>
+        </tr>
+      {% endfor %}
+      </table>
+
+{% endblock %}

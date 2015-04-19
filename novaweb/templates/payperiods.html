@@ -1,0 +1,166 @@
+{% from "_formhelpers.html" import render_field %}
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+
+{% block content %}
+
+<script type="text/javascript">
+  var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
+</script>
+
+<h3>
+  {% set rejectable = True %}
+  {% if payperiod.invoices_processed %}
+    {% set invoice_status = "Delivered" %}
+    {% set rejectable = False %}
+  {% else %}
+    {% set invoice_status = "Not sent" %}
+  {% endif %}
+  {% if payperiod.payroll_processed %}
+    {% set payroll_status = "Paid" %}
+    {% set rejectable = False %}
+  {% else %}
+    {% set payroll_status = "Unpaid" %}
+  {% endif %}
+  <span class="payperiod_invoice_status">Invoices: {{ invoice_status }}</span>
+  <span class="payperiod_payroll_status">Payroll: {{ payroll_status }}</span>
+  <span class="timesheet_date">{{ payperiod.start_date.date() }} - {{ payperiod.end_date.date() }}</span>
+</h3>
+
+
+<div id="payperiod_content">
+  <ul>
+    <li><a href="#">Users</a></li>
+    <li><a href="#">Contracts</a></li>
+  </ul>
+  <div id="payperiod_users">
+    <form action="" method="post">
+      <table>
+        <tr>
+          <td> User </td>
+          <td> Hours worked </td>
+          <td> Total Pay </td>
+          <td> Timesheet </td>
+          <td> History </td>
+        </tr>
+      {% for user in users %}
+        {% if payperiod.timesheets.filter_by(user=user).first().submitted %}
+          {% if payperiod.timesheets.filter_by(user=user).first().approved %}
+            {% set status = "(Submitted, Approved)" %}
+          {% else %}
+            {% set status = "(Submitted, Pending Approval)" %}
+          {% endif %}
+        {% else %}
+          {% set status = "(Open)" %}
+        {% endif %}
+        <tr>
+          <td>{{ user.get_name() }}</td>
+          <td>{{ user.hours_worked(payperiod)['total_hours'] }} </td>
+          <td>${{ user.hours_worked(payperiod)['total_pay'] }}</td>
+          <td><a href="{{url_for("timesheet", payperiod_id=payperiod.id, user_id=user.id)}}">Timesheet {{ status }}</a>
+            {% if rejectable %}<input type="submit" name="reject_ts_{{ payperiod.timesheets.filter_by(user=user).first().id }}" value="Reject!" /> {% endif %}
+          </td>
+          <td><a href="#" class="timesheet_history" data-id="{{user.id}}">History</a></td>
+        </tr>
+      {% endfor %}
+      </table>
+      {% if processable['payroll'] and not payperiod.payroll_processed %}
+        <input type="submit" name="generate_payroll" value="Generate Payroll Report" />
+      {% endif %}
+      {% if payperiod.payroll_processed %}
+        <a href="{{ url_for('view_payroll', payperiod_id=payperiod.id) }}">View Payroll Report</a>
+      {% endif %}
+    </form>
+  </div>
+
+<br />
+
+  <div id="payperiod_contracts">
+    <form action="" method="post">
+      <table>
+        <tr>
+          <td> Customer </td>
+          <td> Total Hours </td>
+          <td> Total Billable </td>
+          <td> Invoice Status </td>
+          <td> Actions </td>
+        </tr>
+        {% for customer in customer_model.values() %}
+          {% if customer['customer'].hours_worked(payperiod)['total_billable'] > 0 %}
+          <tr>
+            <td>{{ customer['customer'].name }}</td>
+            <td>{{ customer['customer'].hours_worked(payperiod)['total_hours'] }}</td>
+            <td>{{ customer['customer'].hours_worked(payperiod)['total_billable'] }}</td>
+            <td>
+              {% if not customer['invoice'] %}
+                Does Not Exist
+              {% else %}
+                {% if customer['invoice'].sent %}
+                  Sent
+                {% else %}
+                  Not Sent
+                {% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% if not customer['invoice'].sent %}<a href="{{url_for('payperiod', generate_invoice=customer['customer'].id, payperiod=payperiod.id)}}">Generate/Update Invoice</a>{% endif %}
+              <br />
+              {% if customer['invoice'] %}<a href={{url_for('view_invoice', invoice=customer['invoice'].id, payperiod=payperiod.id)}}>View Invoice</a>{% endif %}
+              <br />
+              {% if payperiod.payroll_processed %}
+                {% if customer['invoice'] %}<a href="{{url_for('send_invoice', invoice=customer['invoice'].id, payperiod=payperiod.id)}}">{% if customer['invoice'].sent %}Resend{% else %}Send{% endif %} invoice</a>{% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      </table>
+      <a href="{{ url_for('payperiod', generate_invoice='all', payperiod=payperiod.id) }}">Generate/Update All Invoices</a>
+      <p>
+      {% if payperiod.payroll_processed %}
+      <a href="{{ url_for('send_invoice', invoice='all', payperiod=payperiod.id) }}">Send All Invoices</a> <!-- Will only send unsent invoices !-->
+      {% else %}
+      *You must generate payroll before sending invoices
+      {% endif %}
+      </p>
+    </form>
+  </div>
+</div>
+
+<br /><br />
+<div>
+  <a href="{{ url_for('manage_payperiods') }}" title="Manage Payperiods">View/Manage Pay Periods</a>
+</div>
+<br />
+
+<script type='text/javascript'>
+  $(document).ready(function() {
+    $('.timesheet_history').each(function(i, obj) {
+      var $dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+      $dialog.dialog('option', 'title', 'History');
+      var link = "{{url_for('timesheet_history')}}?user_id="+$(this).data("id");
+      $dialog.load(link)
+      $(obj).click(function(event) {
+        event.preventDefault();
+        $dialog.dialog("open");
+      });
+    });
+  });
+</script>
+
+
+<script type='text/javascript'>
+  var $addpayperiod_dialog = $("<div><h3>Loading...</h3></div>").dialog(JQUERYUI_MODAL_OPTIONS);
+  $addpayperiod_dialog.dialog("option", 'title', "Add new pay period");
+  var link = "{{url_for('addpayperiod')}}";
+  $("#addpayperiod").click(function(event) {
+    event.preventDefault();
+    $addpayperiod_dialog.load(link);
+    $addpayperiod_dialog.dialog("open");
+  });
+</script>
+
+{% endblock %}

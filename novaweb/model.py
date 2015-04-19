@@ -3,13 +3,15 @@
 # Documentation: lol python is self documenting
 #
 ##########
+import datetime
+import os
 from flask.ext.sqlalchemy import SQLAlchemy
-#from flask.ext.login import UserMixin
 from flask.ext.security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-import datetime
 from uuid import uuid1 as uuid
 from novaweb import app
+from flask import render_template
+from pdfs import create_pdf
 
 db = SQLAlchemy(app)
 
@@ -105,13 +107,20 @@ class User(db.Model, UserMixin):
       user_role_matrix[role.role.name] = role.permission_bit
     return user_role_matrix
 
+  # returns number of hours worked per customer, along with the pay rate and total pay.
   def hours_worked(self, pay_period):
-    try:
-      logged_hours = self.timesheets.filter_by(payperiod=pay_period).first().logged_hours.all()
-      hours = [x.hours for x in logged_hours]
-    except:
-      hours = [0]
-    return sum(hours)
+    total_pay = 0
+    total_hours = 0
+    hours = {}
+    if len(self.customers) > 0:
+      for customer in self.customers:
+        pay_rate = customer.pay_rate
+        num_hours = sum([x.hours for x in self.timesheets.filter_by(payperiod=pay_period).first().logged_hours.filter_by(customer_id=customer.customer_id)])
+        hours[customer.customer_id] = { 'customer': customer, 'pay_rate': pay_rate, 'hours': num_hours }
+      for val in hours.values():
+        total_pay += ( val['pay_rate'] * val['hours'] )
+        total_hours += val['hours']
+    return { 'total_pay': total_pay, 'total_hours': total_hours, 'hours': hours }
 
   def get_name(self):
     if self.name:
@@ -153,14 +162,22 @@ class Customer(db.Model):
   def __repr__(self):
     return "Customer: %s" % self.name
 
-  def invoice_hours(self, pay_period):
-    logged_hours = []
+  def hours_worked(self, pay_period):
+    total_billable = 0
+    total_hours = 0
     for timesheet in pay_period.timesheets.all():
-      timesheet_hours = self.logged_hours.filter_by(timesheet=timesheet).all()
-      logged_hours += timesheet_hours
-    hours = [x.hours for x in logged_hours]
-    return sum(hours)
-       
+      if timesheet.user.active:
+        timesheet_hours = self.logged_hours.filter_by(timesheet=timesheet).all()
+        uc = UsersCustomers.query.filter_by(user=timesheet.user, customer=self).first()
+        if uc:
+          bill_rate = uc.bill_rate
+        else:
+          bill_rate = 0
+        tmp_hours = sum([x.hours for x in timesheet_hours])
+        total_billable += (tmp_hours * bill_rate)
+        total_hours += tmp_hours
+    hours = { "total_hours": total_hours, "total_billable": total_billable }
+    return hours
 
 # This is an M2M with "Association" pattern
 class UsersCustomers(db.Model):
@@ -174,10 +191,14 @@ class PayPeriod(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   start_date = db.Column(db.DateTime)
   end_date = db.Column(db.DateTime)
+  payroll_processed = db.Column(db.Boolean)
+  invoices_processed = db.Column(db.Boolean)
 
   def __init__(self, start_date, end_date):
     self.start_date = start_date.date()
     self.end_date = end_date.date()
+    self.payroll_processed = False
+    self.invoices_processed = False
 
   def __repr__(self):
     return "Start: %s End: %s" % (self.start_date, self.end_date)
@@ -251,6 +272,7 @@ class Invoice(db.Model):
   payperiod_id = db.Column(db.Integer, db.ForeignKey('pay_period.id'))
   payperiod = db.relationship('PayPeriod', backref=db.backref('invoices', lazy='dynamic'))
   total_hours = db.Column(db.Integer)
+  total_billable = db.Column(db.Integer)
   sent = db.Column(db.Boolean)
   invoice_pdf = db.Column(db.String(255))
 
@@ -258,24 +280,25 @@ class Invoice(db.Model):
     self.customer = customer
     self.payperiod = pay_period
     self.sent = False
-    self.update_invoice()
 
   def update_invoice(self):
-    self.total_hours = self.customer.invoice_hours(self.payperiod)
-    self.generate_invoice()
+    self.total_hours = self.customer.hours_worked(self.payperiod)['total_hours']
+    self.total_billable = self.customer.hours_worked(self.payperiod)['total_billable']
 
   def send_invoice(self):
     email = self.customer.email
     output = self.invoice_pdf
-    print "Sending invoice to: %s with: %s" % (email, output)
     self.sent = True
+    db.session.commit()
+    if os.path.isfile(self.invoice_pdf):
+      return "Sent invoice to %s (%s)" % (self.customer.name, self.customer.email)
+    else:
+      return "File not found!"
 
   def generate_invoice(self):
-    filename = "%s.pdf" % uuid().hex
-    #filepath = app.config.blah
-    # generate pdf with some codes
-    # save it to filepath/filename
-    self.invoice_pdf = filename
-    return "Customer: %s Hours: %s" % (self.customer.name, self.total_hours)
-
-
+    filepath = app.config['PDF_DIR']
+    filename = "/invoice_%s_%s.pdf" % (self.payperiod.start_date.strftime("%m%d%y"), self.customer.name)
+    pdf = create_pdf(render_template("invoice_template.html", payperiod=self.payperiod, invoice=self))
+    with open(app.config['PDF_DIR']+filename, 'w') as pdfout:
+        pdfout.write(pdf.getvalue())
+    self.invoice_pdf = "%s%s" % (filepath, filename)

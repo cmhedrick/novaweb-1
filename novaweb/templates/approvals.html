@@ -13,6 +13,10 @@
   var JQUERYUI_MODAL_OPTIONS = { autoOpen: false, modal: true, width: 600, zIndex: 100000, };
 </script>
 
+<h3>
+<span class="timesheet_date">{{ payperiod.start_date.date() }} - {{ payperiod.end_date.date() }}</span>
+</h3>
+
 {% if timesheet_model %}
 <form action="" method="post">
   <div>

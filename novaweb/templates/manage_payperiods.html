@@ -13,15 +13,12 @@
 
 
 <div>
-  <table class="payperiods">
+  <ul>
     {% for payperiod in payperiods %}
-    <tr>
-      <td><a href="#" title="View Timesheets">View Timesheets</a></td>
-      <td>{{payperiod.start_date.date()}}</td>
-      <td>{{payperiod.end_date.date()}}</td>
-    </tr>
+    <li>
+      <span>{{payperiod.start_date.date()}}</span> - <span>{{payperiod.end_date.date()}}</span>
+    </li>
     {% endfor %}
-  </table>
 </div>
 
 <div>
