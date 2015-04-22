@@ -20,7 +20,15 @@ table {
 }
 
 .timesheet_date {
-  float: right;
+  text-align: right;
+}
+
+.invoice_footer {
+  background-color: "LightGray";
+  text-align: center;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  line-height: 50%;
 }
 </style>
 {% block title %}{{ title }}{% endblock %}
@@ -30,8 +38,75 @@ table {
 
 {% block content %}
 
-<h3>
-  <span class="timesheet_date">{{ payperiod.start_date.date() }} - {{ payperiod.end_date.date() }}</span>
-</h3>
+<p>
+<img class='logo' src="{{ config.APP_ROOT }}/static/images/GoldenNOVAlogo.png" />
+</p>
+
+  <h3 style='text-align: right' >
+    <span class="timesheet_date"><strong>Date:</strong> {{ invoice_date.strftime("%m/%d/%y") }}</span><br />
+    <span class="timesheet_date"><strong>Invoice #:</strong> {{ invoice.id }}</span>
+  </h3>
+
+
+<p>
+NOVA Web Development<br />
+5041 7th Road South, #T1<br />
+Arlington, VA 22204<br />
+Phone: (202) 596-8690 Email: <a href="mailto:jeff@elkner.net">jeff@elkner.net</a><br />
+<a href="http://novawebdevelopment.com">http://novawebdevelopment.com</a><br />
+</p>
+
+<br />
+<p>
+<strong>Bill to:</strong><br />
+{{ invoice.customer.name }} - <a href="mailto:{{ invoice.customer.email }}">{{invoice.customer.email}}</a><br />
+Address:
+{{ invoice.customer.address.replace('\r\n', '\n').replace('\n', '<br />')|safe }} <br />
+</p>
+
+<table>
+  <tr>
+    <td><strong>User</strong></td>
+    <td><strong>Date</strong></td>
+    <td><strong>Description</strong></td>
+    <td><strong>Hours</strong></td>
+    <td><strong>Rate</strong></td>
+    <td><strong>Line Total</strong></td>
+  </tr>
+  {% for user in invoice.customer.hours_worked(payperiod)['logged_hours'].values() %}
+  {% set user_name = user['user'].get_name() %}
+  {% set bill_rate = user['bill_rate'] %}
+    {% for logged_hour in user['hours'] %}
+      {% if logged_hour.hours > 0 %}
+        <tr>
+          <td>{{ user_name }}</td>
+          <td>{{ logged_hour.day.strftime("%m/%d/%y") }}</td>
+          <td>{% if logged_hour.note %}{{ logged_hour.note }}{% endif %}</td>
+          <td>{{ logged_hour.hours }}</td>
+          <td>${{ bill_rate}}</td>
+          {% set line_total = logged_hour.hours * bill_rate %}
+          <td>${{ line_total }}</td>
+        </tr>
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+  <tr>
+    <td colspan="4"></td>
+    <td><strong>Total Due</strong></td>
+    <td>${{ invoice.customer.hours_worked(payperiod)['total_billable'] }}</td>
+  </tr>
+</table>
+
+<p><em>Note:</em><br />
+Due 30 days from invoice date.<br />
+1.5%/month late fees apply.<br />
+Make checks payable to "NOVA Web Development"
+</p>
+
+<div class='invoice_footer'>
+  <p><em>THANK YOU FOR YOUR BUSINESS!</em></p>
+</div>
+    
 
 {% endblock %}
+{% block footer %}{% endblock %}

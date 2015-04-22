@@ -191,12 +191,13 @@ def addcustomer():
   if form.validate_on_submit():
     customer_name = request.form['name']
     customer_email = request.form['email']
+    customer_address = request.form['address']
     customer_contract = request.form['contract']
     customer = Customer.query.filter_by(name=customer_name).first()
     if customer:
       flash("Customer already exists.")
     else:
-      newcustomer = Customer(name=customer_name, email=customer_email, contract=customer_contract) 
+      newcustomer = Customer(name=customer_name, email=customer_email, address=customer_address, contract=customer_contract) 
       db.session.add(newcustomer)
       db.session.commit()
       flash("New customer added")
@@ -480,7 +481,6 @@ def payperiod():
       flash("Invalid customer")
       generate_invoice = False
     if generate_invoice:
-      print customers
       for customer in customers:
         if customer.hours_worked(payperiod)['total_billable'] > 0:
           invoice = Invoice.query.filter_by(customer=customer, payperiod=payperiod).first()
@@ -488,10 +488,13 @@ def payperiod():
             invoice = Invoice(customer, payperiod)
             db.session.add(invoice)
             db.session.commit()
-          invoice.update_invoice()
-          invoice.generate_invoice()
-          db.session.commit()
-          flash("Invoice for customer %s updated." % customer.name)
+          if not invoice.sent:
+            invoice.update_invoice()
+            invoice.generate_invoice()
+            db.session.commit()
+            flash("Invoice for customer %s updated." % customer.name)
+          else:
+            flash("Not updating %s, invoice already sent." % customer.name)
     return redirect(url_for("payperiod"))
   return render_template("payperiods.html", users=users, payperiod=payperiod, processable=processable, customer_model=customer_model)
 

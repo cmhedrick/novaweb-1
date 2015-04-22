@@ -36,7 +36,7 @@
       </tr>
       {% endfor %}
     <script type="text/javascript">
-      var $dialog{{customer.id}} = $("<div>{{customer.contract}}</div>").dialog(JQUERYUI_MODAL_OPTIONS);
+      var $dialog{{customer.id}} = $("<div>Address: <br /> {{ customer.address.replace('\r\n', '\n').replace('\n', '<br />')|safe }} <br /><br />{{customer.contract}}</div>").dialog(JQUERYUI_MODAL_OPTIONS);
       $dialog{{customer.id}}.dialog("option", "title", "Contract Details");
       $("#c_{{customer.id}}").click(function(event) {
         event.preventDefault();

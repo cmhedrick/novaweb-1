@@ -13,6 +13,7 @@ app.config.from_envvar('NOVAWEB_SETTINGS', silent=True)
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 PDF_DIR = os.path.join(APP_ROOT, "novaweb_files")
 app.config['PDF_DIR'] = PDF_DIR
+app.config['APP_ROOT'] = APP_ROOT
 
 login_manager = LoginManager()
 login_manager.init_app(app)

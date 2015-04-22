@@ -9,11 +9,13 @@ TODO:
   -- Audit Logs
   -- Add ability to specify which payperiod you want to view in def payperiod() (currently set to "oldest one outstanding")
     -- Include navigation to go backwards and forwards(up to current only)
+    -- link from manage payperiod
   -- create invoice pdf
 
-NEATO EXTRAS:
+Extras:
   -- Only make flash() disappear if overwritten by .js
   -- default flash() should "roll up" into hidden bar ( +------------------ ) instead
+  -- Add discount/subtotal support. Discounts - per contract, or per invoice?
 
 
 Styling Todo Requests:

@@ -20,7 +20,7 @@ table {
 }
 
 .timesheet_date {
-  float: right;
+  text-align: right;
 }
 </style>
 {% block title %}{{ title }}{% endblock %}
@@ -30,7 +30,12 @@ table {
 
 {% block content %}
 
-<h3>
+<p>
+<img class='logo' src="{{ config.APP_ROOT }}/static/images/GoldenNOVAlogo.png" />
+</p>
+
+
+<h3 style='text-align: right' >
   <span class="timesheet_date">{{ payperiod.start_date.date() }} - {{ payperiod.end_date.date() }}</span>
 </h3>
 
@@ -42,7 +47,7 @@ table {
         </tr>
       {% for user in users %}
         <tr>
-          <td>{{ user.get_name() }}</td>
+          <td>{% if user.name %}{{ user.name }} ({{ user.username }}) {% else %} {{ user.username }} {% endif %}</td>
           <td>{{ user.hours_worked(payperiod)['total_hours'] }} </td>
           <td>${{ user.hours_worked(payperiod)['total_pay'] }}</td>
         </tr>

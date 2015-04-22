@@ -22,6 +22,7 @@ class AddGroup(Form):
 class AddCustomer(Form):
   name = TextField("Customer Name")
   email = TextField("Customer E-Mail")
+  address = TextAreaField("Address")
   contract = TextAreaField("Contract")
 
 class AddPayPeriod(Form):

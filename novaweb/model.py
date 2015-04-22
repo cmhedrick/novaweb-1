@@ -151,12 +151,14 @@ class Group(db.Model):
 class Customer(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String(255), unique=True)
-  email = db.Column(db.String(255), unique=True)
+  email = db.Column(db.String(255))
+  address = db.Column(db.Text())
   contract = db.Column(db.Text())
 
-  def __init__(self, name, email, contract=None):
+  def __init__(self, name, email, address=None, contract=None):
     self.name = name
     self.email = email
+    self.address = address
     self.contract = contract
 
   def __repr__(self):
@@ -165,6 +167,7 @@ class Customer(db.Model):
   def hours_worked(self, pay_period):
     total_billable = 0
     total_hours = 0
+    logged_hours = {}
     for timesheet in pay_period.timesheets.all():
       if timesheet.user.active:
         timesheet_hours = self.logged_hours.filter_by(timesheet=timesheet).all()
@@ -173,10 +176,11 @@ class Customer(db.Model):
           bill_rate = uc.bill_rate
         else:
           bill_rate = 0
+        logged_hours[timesheet.user.id] = { "user":timesheet.user, "bill_rate": bill_rate, "hours": timesheet_hours }
         tmp_hours = sum([x.hours for x in timesheet_hours])
         total_billable += (tmp_hours * bill_rate)
         total_hours += tmp_hours
-    hours = { "total_hours": total_hours, "total_billable": total_billable }
+    hours = { "total_hours": total_hours, "total_billable": total_billable, "logged_hours": logged_hours }
     return hours
 
 # This is an M2M with "Association" pattern
@@ -266,7 +270,7 @@ class LoggedHours(db.Model):
     return "User: %s Customer: %s Hours: %s" % (self.timesheet.user.username, self.customer.name, self.hours)
 
 class Invoice(db.Model):
-  id = db.Column(db.Integer, primary_key=True)
+  id = db.Column(db.Integer, db.Sequence('seq_invoice_id', start=1100, increment=1), primary_key=True)
   customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'))
   customer = db.relationship('Customer', backref=db.backref('invoices', lazy='dynamic'))
   payperiod_id = db.Column(db.Integer, db.ForeignKey('pay_period.id'))
@@ -298,7 +302,8 @@ class Invoice(db.Model):
   def generate_invoice(self):
     filepath = app.config['PDF_DIR']
     filename = "/invoice_%s_%s.pdf" % (self.payperiod.start_date.strftime("%m%d%y"), self.customer.name)
-    pdf = create_pdf(render_template("invoice_template.html", payperiod=self.payperiod, invoice=self))
+    invoice_date = datetime.date.today()
+    pdf = create_pdf(render_template("invoice_template.html", payperiod=self.payperiod, invoice=self, invoice_date=invoice_date))
     with open(app.config['PDF_DIR']+filename, 'w') as pdfout:
         pdfout.write(pdf.getvalue())
     self.invoice_pdf = "%s%s" % (filepath, filename)

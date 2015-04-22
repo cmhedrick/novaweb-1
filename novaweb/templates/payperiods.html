@@ -57,7 +57,7 @@
           {% set status = "(Open)" %}
         {% endif %}
         <tr>
-          <td>{{ user.get_name() }}</td>
+          <td>{% if user.name %}{{ user.name }} ({{ user.username }}) {% else %} {{ user.username }} {% endif %}</td>
           <td>{{ user.hours_worked(payperiod)['total_hours'] }} </td>
           <td>${{ user.hours_worked(payperiod)['total_pay'] }}</td>
           <td><a href="{{url_for("timesheet", payperiod_id=payperiod.id, user_id=user.id)}}">Timesheet {{ status }}</a>
@@ -93,7 +93,7 @@
           <tr>
             <td>{{ customer['customer'].name }}</td>
             <td>{{ customer['customer'].hours_worked(payperiod)['total_hours'] }}</td>
-            <td>{{ customer['customer'].hours_worked(payperiod)['total_billable'] }}</td>
+            <td>${{ customer['customer'].hours_worked(payperiod)['total_billable'] }}</td>
             <td>
               {% if not customer['invoice'] %}
                 Does Not Exist

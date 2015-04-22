@@ -12,7 +12,7 @@
   <body>
   <div class="page-wrap">
       <div id="header">
-          <img class="logo" src="../static/images/GoldenNOVAlogo.svg" alt="NovaWeb Logo">
+          <img class="logo" src="{{ url_for('static', filename='images/GoldenNOVAlogo.png') }}" alt="NovaWeb Logo">
           {% block menubar %}
             {% if current_user.is_authenticated() %}
               <div id="menubar">
