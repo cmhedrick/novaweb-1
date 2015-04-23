@@ -44,6 +44,15 @@ body{
   float: right;
 }
 
+#pp_nav_previous {
+  float: left;
+}
+
+#pp_nav_next {
+  float: right;
+}
+
+
 .loginContainer{
     width:400px;
     height:500px;

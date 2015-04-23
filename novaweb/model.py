@@ -7,6 +7,7 @@ import datetime
 import os
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin
+from flask.ext.login import current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from uuid import uuid1 as uuid
 from novaweb import app
@@ -115,7 +116,12 @@ class User(db.Model, UserMixin):
     if len(self.customers) > 0:
       for customer in self.customers:
         pay_rate = customer.pay_rate
-        num_hours = sum([x.hours for x in self.timesheets.filter_by(payperiod=pay_period).first().logged_hours.filter_by(customer_id=customer.customer_id)])
+        num_hours = 0
+        timesheet = self.timesheets.filter_by(payperiod=pay_period).first()
+        if timesheet:
+          logged_hours = timesheet.logged_hours.filter_by(customer_id=customer.customer_id)
+          if logged_hours:
+            num_hours = sum([x.hours for x in logged_hours])
         hours[customer.customer_id] = { 'customer': customer, 'pay_rate': pay_rate, 'hours': num_hours }
       for val in hours.values():
         total_pay += ( val['pay_rate'] * val['hours'] )
@@ -307,3 +313,28 @@ class Invoice(db.Model):
     with open(app.config['PDF_DIR']+filename, 'w') as pdfout:
         pdfout.write(pdf.getvalue())
     self.invoice_pdf = "%s%s" % (filepath, filename)
+
+class AuditLogType(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  audit_type = db.Column(db.String(255))
+
+  def __init__(self, audit_type):
+    self.audit_type = audit_type
+
+class AuditLog(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  audit_type_id = db.Column(db.Integer, db.ForeignKey('audit_log_type.id'))
+  audit_type = db.relationship('AuditLogType', backref=db.backref('auditlogs', lazy='dynamic'))
+  date = db.Column(db.DateTime)
+  message = db.Column(db.String(255))
+  user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+  user = db.relationship('User', backref=db.backref('auditlogs', lazy='dynamic'))
+
+  def __init__(self, audit_type, audit_message):
+    self.audit_type = audit_type
+    self.date = datetime.date.today()
+    self.message = audit_message
+    if current_user.is_authenticated():
+      self.user = current_user
+    else:
+      self.user = None

@@ -19,6 +19,8 @@ def load_user(userid):
 @app.route("/logout")
 @login_required
 def logout():
+  print current_user
+  log_event("login", "User %s logged out." % current_user.username)
   logout_user()
   return redirect(url_for("index"))
 
@@ -33,7 +35,9 @@ def login():
     if user:
       if user.check_password(password):
         login_user(user)
+        log_event("login", "User %s logged in." % username)
         return redirect(request.args.get("next") or url_for("timesheet"))
+    log_event("login", "User failed to login (%s)" % username)
     flash("Unsuccessful login attempt.")
   return render_template("login.html", form=form)
 
@@ -112,6 +116,7 @@ def adduser():
       user.name = name
       user.active = active
       db.session.commit()
+      log_event("user", "User %s updated." % username)
       flash("User updated.")
       return redirect(url_for("user_management"))
     else:
@@ -123,6 +128,7 @@ def adduser():
           newuser = User(username=username, password=password, email=email, name=name, active=active)
           db.session.add(newuser)
           db.session.commit()
+          log_event("user", "User %s created." % username)
           flash("New user added.")
         else:
           flash("Password does not match.")
@@ -147,6 +153,7 @@ def deletegroup():
   if not has_errors:
     db.session.delete(group)
     db.session.commit()
+    log_event("user", "Group %s deleted." % group.name)
     flash("Group deleted successfully.")
   return redirect(url_for("groups_and_permissions"))
   
@@ -169,6 +176,7 @@ def addgroup():
     if 'group_id' in request.values:
       group.name = request.form['name']
       db.session.commit()
+      log_event("user", "Group %s updated." % group.name)
       flash("Group modified.")
     else:
       groupname = request.form['name']
@@ -179,6 +187,7 @@ def addgroup():
         newgroup = Group(name=groupname)
         db.session.add(newgroup)
         db.session.commit()
+        log_event("user", "Group created (%s)" % groupname)
         flash("New group added.")
     return redirect(url_for("groups_and_permissions"))
   return render_template("addgroup.html", form=form, group_id=group_id)
@@ -200,6 +209,7 @@ def addcustomer():
       newcustomer = Customer(name=customer_name, email=customer_email, address=customer_address, contract=customer_contract) 
       db.session.add(newcustomer)
       db.session.commit()
+      log_event("customer", "Customer added (%s)" % customer_name)
       flash("New customer added")
     return redirect(url_for("contracts"))
   return render_template("addcustomer.html", form=form)
@@ -281,6 +291,7 @@ def modify_customer_users():
           if user_customer in user.customers:
             user.customers.remove(user_customer)
             db.session.delete(user_customer)
+    log_event("customer", "Customer Users list updated (%s)" % customer.name)
     flash("Contract updated.")
     db.session.commit()
     return redirect(url_for("contracts"))
@@ -308,6 +319,8 @@ def groups_and_permissions():
                  'pp': 'Pay Period',
                  'ts': 'Timesheet',
                  'ap': 'Approvals',
+                 'pr': 'Payroll',
+                 'au': 'Audit',
                }
   user_group_matrix = {}
   for user in users:
@@ -387,6 +400,7 @@ def groups_and_permissions_handler():
         if group in user.groups:
           user.groups.remove(group)
   db.session.commit()
+  log_event("user", "Group/User Permissions Matrix updated.")
   flash("Permissions saved.")
   return redirect(url_for("groups_and_permissions"))
 
@@ -415,6 +429,7 @@ def addpayperiod():
       ppay = PayPeriod(start_date, end_date)
       db.session.add(ppay)
       db.session.commit()
+      log_event("payroll", "Pay period created: %s" % ppay)
       flash("New pay period created.")
     return redirect(url_for("payperiod"))
   return render_template("addpayperiod.html", form=form, latest_date=latest_date)  
@@ -441,8 +456,17 @@ def get_last_payperiod():
 @login_required
 @require_role("pp_view")
 def payperiod():
-  processable = {}
   payperiod = get_last_payperiod()
+  if 'payperiod_id' in request.values:
+    payperiod = PayPeriod.query.get(request.values['payperiod_id'])
+  if not payperiod:
+    flash("Pay period not found. Defaulting to active pay period.")
+    payperiod = get_last_payperiod()
+  if payperiod.start_date >= get_current_payperiod().start_date:
+    navigation = {'next': None, 'previous': payperiod.get_previous()}
+  else:
+    navigation = {'next': payperiod.get_next(), 'previous': payperiod.get_previous()}
+  processable = {}
   users = User.query.filter_by(active=True).all()
   processable['payroll'] = True
   for timesheet in payperiod.timesheets.all():
@@ -469,6 +493,7 @@ def payperiod():
           with open(app.config['PDF_DIR']+filename, 'w') as pdfout:
             pdfout.write(pdf.getvalue())
           payperiod.payroll_processed = True
+          log_event("payroll", "Payroll generated (%s)" % payperiod.id)
           db.session.commit()
   # handle generation of invoice
   if 'generate_invoice' in request.values:
@@ -480,6 +505,7 @@ def payperiod():
     if not len(customers) > 0:
       flash("Invalid customer")
       generate_invoice = False
+    invoice_generated = False
     if generate_invoice:
       for customer in customers:
         if customer.hours_worked(payperiod)['total_billable'] > 0:
@@ -489,14 +515,18 @@ def payperiod():
             db.session.add(invoice)
             db.session.commit()
           if not invoice.sent:
+            invoice_generated = True
             invoice.update_invoice()
             invoice.generate_invoice()
             db.session.commit()
+            log_event("invoice", "Invoice for customer updated. (%s)" % customer.name)
             flash("Invoice for customer %s updated." % customer.name)
           else:
             flash("Not updating %s, invoice already sent." % customer.name)
-    return redirect(url_for("payperiod"))
-  return render_template("payperiods.html", users=users, payperiod=payperiod, processable=processable, customer_model=customer_model)
+    if not invoice_generated:
+      flash("Error: No invoices were generated.")
+    return redirect(url_for("payperiod", payperiod_id=payperiod.id))
+  return render_template("payperiods.html", users=users, payperiod=payperiod, processable=processable, customer_model=customer_model, navigation=navigation)
 
 @app.route("/view_payroll", methods=['GET', 'POST'])
 @login_required
@@ -697,6 +727,7 @@ def process_timesheet_approvals(request, timesheet_model):
         timesheet = Timesheet.query.get(timesheet_id)
         timesheet.approved = True
         db.session.commit()
+        log_event("approve", "Timesheet for %s approved." % timesheet.user.username)
         flash("Timesheet for %s approved." % timesheet.user.get_name())
       token = "reject_ts_%s" % timesheet_id
       if token in request.values:
@@ -704,6 +735,7 @@ def process_timesheet_approvals(request, timesheet_model):
         timesheet.approved = False
         timesheet.submitted = False
         db.session.commit()
+        log_event("approve", "Timesheet for %s rejected." % timesheet.user.username)
         flash("Timesheet for %s rejected." % timesheet.user.get_name())
 
 @app.route("/approvals", methods=['GET', 'POST'])
@@ -762,6 +794,7 @@ def timesheet():
             conversion_error = True
         logged_hour.hours = value
         db.session.commit()
+    log_event("timesheet", "Timesheet updated (%s)." % user.username)
     flash("Timesheet has been updated!")
     if conversion_error:
       flash("An error occurred converting one or more timesheet values. Please doublecheck your timesheet")
@@ -770,8 +803,11 @@ def timesheet():
         timesheet.submitted = True
         if current_user.has_role("ts_approve"):
           timesheet.approved = True
+          log_event("timesheet", "Timesheet submitted for %s" % user.username)
+          log_event("approve", "Timesheet automatically approved for %s" % user.username)
           flash("Timesheet successfully submitted and automatically approved.")
         else:
+          log_event("timesheet", "Timesheet submitted for %s" % user.username)
           flash("Timesheet successfully submitted. Now pending approval.")
   db.session.commit()
   return render_template("timesheet.html", logged_hours=logged_hours, payperiod=payperiod, navigation=navigation, user=user, date_headers=date_headers, timesheet=timesheet)
@@ -783,8 +819,26 @@ def user_management():
   users = User.query.all()
   groups = Group.query.all()
   return render_template("user_management.html", users=users, groups=groups)
-  
-    
+
+
+def log_event(event_type, event_message):
+  etype = AuditLogType.query.filter_by(audit_type=event_type).first()
+  event = AuditLog(etype, event_message)
+  db.session.add(event)
+  db.session.commit()
+
+@app.route('/cron')
+def cron():
+  print "Here would be code to track reminder-status and send e-mails"
+  # figure out business logic of when you want e-mail reminders for timesheets to be sent.
+
+@app.route("/audit_log")
+@login_required
+@require_role("au_view")
+def audit_log():
+  logs = AuditLog.query.order_by(AuditLog.date).all()
+  return render_template("audit_log.html", logs=logs)
+
 @app.route('/')
 @login_required
 def index():

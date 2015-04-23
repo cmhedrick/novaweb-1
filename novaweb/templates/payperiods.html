@@ -12,6 +12,18 @@
 </script>
 
 <h3>
+  {% if navigation['previous'] %}
+    <span id="pp_nav_previous"><a href="{{ url_for('payperiod', payperiod_id=navigation['previous'].id) }}">&lt;&lt;&lt; last pay period</a></span>
+  {% endif %}
+
+  {% if navigation['next'] %}
+    <span id="pp_nav_next"><a href="{{ url_for('payperiod', payperiod_id=navigation['next'].id) }}">next pay period &gt;&gt;&gt;</a></span>
+  {% endif %}
+</h3>
+
+
+<br />
+<h3 style="clear: both;">
   {% set rejectable = True %}
   {% if payperiod.invoices_processed %}
     {% set invoice_status = "Delivered" %}
@@ -106,7 +118,7 @@
               {% endif %}
             </td>
             <td>
-              {% if not customer['invoice'].sent %}<a href="{{url_for('payperiod', generate_invoice=customer['customer'].id, payperiod=payperiod.id)}}">Generate/Update Invoice</a>{% endif %}
+              {% if not customer['invoice'].sent %}<a href="{{url_for('payperiod', generate_invoice=customer['customer'].id, payperiod_id=payperiod.id)}}">Generate/Update Invoice</a>{% endif %}
               <br />
               {% if customer['invoice'] %}<a href={{url_for('view_invoice', invoice=customer['invoice'].id, payperiod=payperiod.id)}}>View Invoice</a>{% endif %}
               <br />
@@ -118,7 +130,7 @@
           {% endif %}
         {% endfor %}
       </table>
-      <a href="{{ url_for('payperiod', generate_invoice='all', payperiod=payperiod.id) }}">Generate/Update All Invoices</a>
+      <a href="{{ url_for('payperiod', generate_invoice='all', payperiod_id=payperiod.id) }}">Generate/Update All Invoices</a>
       <p>
       {% if payperiod.payroll_processed %}
       <a href="{{ url_for('send_invoice', invoice='all', payperiod=payperiod.id) }}">Send All Invoices</a> <!-- Will only send unsent invoices !-->

@@ -15,8 +15,24 @@
 <div>
   <ul>
     {% for payperiod in payperiods %}
+      {% if payperiod.invoices_processed %}
+        {% set invoice_status = "Delivered" %}
+      {% else %}
+        {% set invoice_status = "Not sent" %}
+      {% endif %}
+      {% if payperiod.payroll_processed %}
+        {% set payroll_status = "Paid" %}
+      {% else %}
+        {% set payroll_status = "Unpaid" %}
+      {% endif %}
     <li>
-      <span>{{payperiod.start_date.date()}}</span> - <span>{{payperiod.end_date.date()}}</span>
+      <a href={{ url_for("payperiod", payperiod_id=payperiod.id) }}>
+        <span>{{payperiod.start_date.date()}}</span> - <span>{{payperiod.end_date.date()}}</span>
+      </a>
+        (
+          <span class="payperiod_invoice_status">Invoices: {{ invoice_status }}</span>
+          <span class="payperiod_payroll_status">Payroll: {{ payroll_status }}</span>
+        )
     </li>
     {% endfor %}
 </div>

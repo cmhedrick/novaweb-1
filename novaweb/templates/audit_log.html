@@ -1,0 +1,29 @@
+{% from "_formhelpers.html" import render_field %}
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+{% block title %}{{ title }}{% endblock %}
+{% endblock %}
+
+{% block content %}
+
+<div>
+<table>
+  <tr>
+    <td>Date</td>
+    <td>User</td>
+    <td>Audit Event Type</td>
+    <td>Audit Message</td>
+  </tr>
+  {% for log in logs %}
+  <tr>
+    <td>{{ log.date.strftime("%m/%d/%y") }}</td>
+    <td>{{ log.user.username }}</td>
+    <td>{{ log.audit_type.audit_type }}</td>
+    <td>{{ log.message }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+
+{% endblock %}
