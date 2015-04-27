@@ -24,7 +24,8 @@
     {% for item in timesheet_model.values() %}
         <li>{{ render_name(item['timesheet'].user) }}</li>
         <table>
-          <tr><th>Customer Name</th><th>Hours Worked</th><th>Pay Rate</th><th>Total</th></tr>
+            <thead>
+          <tr><th>Customer Name</th><th>Hours Worked</th><th>Pay Rate</th><th>Total</th></tr></thead><tbody>
         {% for customer_item in item['customers'].values() %}
             <tr>
               <td>{{ customer_item['customer'].name }}</td>
@@ -33,7 +34,7 @@
               <td>${{ customer_item['total'] }}</td>
             </tr>
         {% endfor %}
-            <tr><td></td><td></td><td></td><td class='ts_grand_total'>${{ item['total'] }}</td></tr>
+            <tr><td></td><td></td><td></td><td class='ts_grand_total'>${{ item['total'] }}</td></tr></tbody>
         </table>
         <input type="submit" name="approve_ts_{{ item['timesheet'].id }}" value="Approve!" />
         <input type="submit" name="reject_ts_{{ item['timesheet'].id }}" value="Reject!" />

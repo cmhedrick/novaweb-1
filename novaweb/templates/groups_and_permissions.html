@@ -11,6 +11,7 @@
 <h3> Permissions </h3>
 <form action="" method="post">
 <table>
+  <thead>
   <tr>
     <th rowspan="3"></th>
     <th colspan="{{ permissions['total']}}">Permissions</th>
@@ -27,6 +28,7 @@
       {% endfor %}
     {% endfor %}
   </tr>
+  </thead>
   {% for group in permissions['group_matrix'] %}
     <tr>
       <td><img src={{ url_for('static', filename='users.png') }} /> {{ permissions['group_matrix'][group]['group'].name}} <a href="#" class="edit_group" data-id="{{permissions['group_matrix'][group]['group'].id}}">(edit group icon)</a><a href="{{url_for("deletegroup", group_id=permissions['group_matrix'][group]['group'].id)}}" class="delete_group">(delete group icon)</a> </td>
@@ -56,6 +58,7 @@
 <h3> Group Memberships </h3>
 <div class="user_groups">
   <table style="width: 100%" border="1">
+      <thead>
     <tr>
       <th rowspan="2"></th>
       <th colspan="{{ group_model['total'] }}">Groups</th>
@@ -65,6 +68,7 @@
         <th>{{ group_name.name }}</th>
       {% endfor %}
     </tr>
+    </thead><tbody>
     {% for user in group_model['user_group_matrix'] %}
     <tr>
       <td>{{ group_model['user_group_matrix'][user]['name'].username }}</td>
@@ -73,6 +77,7 @@
       {% endfor %}
     </tr>
     {% endfor %}
+      </tbody>
   </table>
 </div>
 <br />

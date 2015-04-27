@@ -44,13 +44,16 @@
 
 
 <div id="payperiod_content">
-  <ul>
-    <li><a href="#">Users</a></li>
-    <li><a href="#">Contracts</a></li>
-  </ul>
+    <div>
+    <ul>
+    <li><a href="javascript:toggleDiv('payperiod_users'); javascript:toggleDiv('payperiod_contracts')">Users</a></li>
+    <li><a href="javascript:toggleDiv('payperiod_contracts'); javascript:toggleDiv('payperiod_users')">Contracts</a></li>
+    </ul>
+    </div>
   <div id="payperiod_users">
     <form action="" method="post">
       <table>
+          <thead>
         <tr>
           <td> User </td>
           <td> Hours worked </td>
@@ -58,6 +61,7 @@
           <td> Timesheet </td>
           <td> History </td>
         </tr>
+        </thead><tbody>
       {% for user in users %}
         {% if payperiod.timesheets.filter_by(user=user).first().submitted %}
           {% if payperiod.timesheets.filter_by(user=user).first().approved %}
@@ -78,6 +82,7 @@
           <td><a href="#" class="timesheet_history" data-id="{{user.id}}">History</a></td>
         </tr>
       {% endfor %}
+          </tbody>
       </table>
       {% if processable['payroll'] and not payperiod.payroll_processed %}
         <input type="submit" name="generate_payroll" value="Generate Payroll Report" />
@@ -90,9 +95,10 @@
 
 <br />
 
-  <div id="payperiod_contracts">
+  <div id="payperiod_contracts" style="display:none;">
     <form action="" method="post">
       <table>
+          <thead>
         <tr>
           <td> Customer </td>
           <td> Total Hours </td>
@@ -100,6 +106,7 @@
           <td> Invoice Status </td>
           <td> Actions </td>
         </tr>
+        </thead><tbody>
         {% for customer in customer_model.values() %}
           {% if customer['customer'].hours_worked(payperiod)['total_billable'] > 0 %}
           <tr>
@@ -129,6 +136,7 @@
           </tr>
           {% endif %}
         {% endfor %}
+          </tbody>
       </table>
       <a href="{{ url_for('payperiod', generate_invoice='all', payperiod_id=payperiod.id) }}">Generate/Update All Invoices</a>
       <p>
