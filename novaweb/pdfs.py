@@ -1,4 +1,4 @@
-#from xhtml2pdf import pisa
+from xhtml2pdf import pisa
 from cStringIO import StringIO
 
 def create_pdf(pdf_data):
