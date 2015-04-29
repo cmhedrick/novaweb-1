@@ -86,7 +86,7 @@ def admin():
 
 @app.route("/adduser", methods=['GET', 'POST'])
 @login_required
-@require_role("gp_edit")
+@require_role("um_edit")
 def adduser():
   user_id = None
   if 'user_id' in request.values:
