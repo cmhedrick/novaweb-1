@@ -9,12 +9,14 @@
 
 <div>
 <table>
+    <thead>
   <tr>
     <td>Date</td>
     <td>User</td>
     <td>Audit Event Type</td>
     <td>Audit Message</td>
   </tr>
+  </thead><tbody>
   {% for log in logs %}
   <tr>
     <td>{{ log.date.strftime("%m/%d/%y") }}</td>
@@ -23,6 +25,7 @@
     <td>{{ log.message }}</td>
   </tr>
   {% endfor %}
+    </tbody>
 </table>
 </div>
 

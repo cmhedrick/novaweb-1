@@ -4,6 +4,7 @@
     {% block head %}
       <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
       <script src="{{ url_for('static', filename='jquery-ui.js') }}"></script>
+      <script src="{{ url_for('static', filename='toggle.js') }}"></script>
       <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
       <link rel="stylesheet" href="{{ url_for('static', filename='jquery-ui.css') }}" />
       <title>{% block title %}{{ title }}{% endblock %} - NOVAWEB</title>
@@ -17,13 +18,13 @@
             {% if current_user.is_authenticated() %}
               <div id="menubar">
                 <ul class="menubar">
-                  <li><a href="{{ url_for("timesheet") }}" title="Timesheet">Timesheet</a></li>
-                  <li><a href="{{ url_for("groups_and_permissions") }}" title="Groups & Permissions">Groups & Permissions</a></li>
-                  <li><a href="{{ url_for("user_management") }}" title="User Management">User Management</a></li>
-                  <li><a href="{{ url_for("contracts") }}" title="Contracts">Contracts</a></li>
-                  <li><a href="{{ url_for("payperiod") }}" title="Pay Periods">Payroll & Invoice</a></li>
-                  <li><a href="{{ url_for("approvals") }}" title="Approvals">Approvals</a></li>
-                  <li><a href="{{ url_for("audit_log") }}" title="Audit Logs">Audit Logs</a></li>
+                  <li><a {% if request.path == "/timesheet" %}class="active"{% endif %} href="{{ url_for("timesheet") }}" title="Timesheet">Timesheet</a></li>
+                  <li><a {% if request.path == "/groups_and_permissions" %}class="active"{% endif %} href="{{ url_for("groups_and_permissions") }}" title="Groups & Permissions">Groups & Permissions</a></li>
+                  <li><a {% if request.path == "/user_management" %}class="active"{% endif %} href="{{ url_for("user_management") }}" title="User Management">User Management</a></li>
+                  <li><a {% if request.path == "/contracts" %}class="active"{% endif %} href="{{ url_for("contracts") }}" title="Contracts">Contracts</a></li>
+                  <li><a {% if request.path == "/payperiod" %}class="active"{% endif %} href="{{ url_for("payperiod") }}" title="Pay Periods">Payroll & Invoice</a></li>
+                  <li><a {% if request.path == "/approvals" %}class="active"{% endif %} href="{{ url_for("approvals") }}" title="Approvals">Approvals</a></li>
+                  <li><a {% if request.path == "/audit_log" %}class="active"{% endif %} href="{{ url_for("audit_log") }}" title="Audit Logs">Audit Logs</a></li>
                   <li><a href="{{ url_for("logout") }}" title="logout">Logout</a></li>
                 </ul>
               </div>

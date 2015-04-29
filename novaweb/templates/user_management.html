@@ -11,6 +11,7 @@
 <h3> Users & Groups </h3>
 <div id="users_table">
 <table style="width: 100%" border="1">
+        <thead>
   <tr><th colspan="4">Users</th></tr>
   <tr>
     <th>Username</th>
@@ -18,6 +19,7 @@
     <th>E-mail</th>
     <th>Active?</th>
   </tr>
+        </thead><tbody>
   {% for user in users %}
   <tr>
     <td>{{user.username}}<a href="#" class="edit_user" data-id="{{user.id}}">(edit user icon)</a></td>
@@ -29,6 +31,7 @@
   <tr>
     <td><a id="adduser" href="#" title="Add new user">Add new user</a></td>
   </tr>
+        </tbody>
 </table>
 </div>
 

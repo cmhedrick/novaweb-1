@@ -42,7 +42,7 @@
         {% for logged_hour in logged_hours[customer] %}
           {# u#_c#_y#_m#_d# #}
           {% set field_name = "u"~user.id~"_c"~customer.id~logged_hour.day.strftime("_y%y_m%m_d%d") %}
-          <td> <input type="text" id="{{ field_name }}" name="{{ field_name }}" value="{{logged_hour.hours}}" class="hours" maxlength="4" size="4" {% if timesheet.submitted %}disabled{% endif %} /><a href="#" data-id="{{logged_hour.id}}" class="ts_taskorder"><img src="{{url_for('static', filename='taskorder.png')}}" width="16" height="16" /></a></td>
+          <td> <input type="text" id="{{ field_name }}" name="{{ field_name }}" value="{{logged_hour.hours}}" tabindex="{{logged_hour.id}}" class="hours" maxlength="4" size="4" {% if timesheet.submitted %}disabled{% endif %} /><a href="#" data-id="{{logged_hour.id}}" class="ts_taskorder"><img src="{{url_for('static', filename='taskorder.png')}}" width="16" height="16" /></a></td>
         {% endfor %}
       </tr>
     {% endfor %}
