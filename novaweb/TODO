@@ -5,6 +5,7 @@ Bugs:
 
 TODO:
   -- Email Timesheet Reminders
+  -- refactor payperiod / pdf creation routines
 
 Extras:
   -- Only make flash() disappear if overwritten by .js

@@ -13,6 +13,9 @@ db.create_all()
 print "Database created."
 
 admin = User("admin", "admin", "nwheele3@gmu.edu")
+admin_group = Group("admin")
+admin.groups.append(admin_group)
+db.session.add(admin_group)
 db.session.add(admin)
 
 audit_reason_1 = AuditLogType("login")

@@ -409,7 +409,9 @@ def groups_and_permissions_handler():
 @require_role("pp_edit")
 def addpayperiod():
   form = AddPayPeriod(request.form)
-  latest_date = PayPeriod.query.order_by(PayPeriod.end_date.desc()).first().end_date.date() + datetime.timedelta(days=1)
+  latest_date = datetime.date.today()
+  if PayPeriod.query.count() > 0:
+    latest_date = PayPeriod.query.order_by(PayPeriod.end_date.desc()).first().end_date.date() + datetime.timedelta(days=1)
   if form.validate_on_submit():
     start_date = dateparser.parse(request.values['start_date'])
     end_date = dateparser.parse(request.values['end_date'])
@@ -445,23 +447,33 @@ def manage_payperiods():
 # should not go past current timesheet
 def get_last_payperiod():
   current_payperiod = get_current_payperiod()
-  payperiods = PayPeriod.query.filter(PayPeriod.end_date <= current_payperiod.end_date).order_by("start_date").all()
+  payperiods = []
+  if PayPeriod.query.count() > 0:
+    payperiods = PayPeriod.query.filter(PayPeriod.end_date <= current_payperiod.end_date).order_by("start_date").all()
   for payperiod in payperiods:
     if not payperiod.payroll_processed or not payperiod.invoices_processed:
       return payperiod
   return current_payperiod
 
 
+# this function needs to be refactored. generate payroll should be separate completely.
 @app.route("/payperiod", methods=['GET', 'POST'])
 @login_required
 @require_role("pp_view")
 def payperiod():
+  if 'current_view' in request.values:
+    current_view = request.values['current_view']
+  else:
+    current_view = "users"
   payperiod = get_last_payperiod()
   if 'payperiod_id' in request.values:
     payperiod = PayPeriod.query.get(request.values['payperiod_id'])
   if not payperiod:
     flash("Pay period not found. Defaulting to active pay period.")
     payperiod = get_last_payperiod()
+  if not payperiod:
+    flash("No payperiods found. Please setup payperiods.")
+    return redirect(url_for("manage_payperiods"))
   if payperiod.start_date >= get_current_payperiod().start_date:
     navigation = {'next': None, 'previous': payperiod.get_previous()}
   else:
@@ -497,6 +509,7 @@ def payperiod():
           db.session.commit()
   # handle generation of invoice
   if 'generate_invoice' in request.values:
+    current_view = "contracts"
     generate_invoice = True
     if request.values['generate_invoice'] == "all":
       customers = Customer.query.all()
@@ -525,8 +538,8 @@ def payperiod():
             flash("Not updating %s, invoice already sent." % customer.name)
     if not invoice_generated:
       flash("Error: No invoices were generated.")
-    return redirect(url_for("payperiod", payperiod_id=payperiod.id))
-  return render_template("payperiods.html", users=users, payperiod=payperiod, processable=processable, customer_model=customer_model, navigation=navigation)
+    return redirect(url_for("payperiod", payperiod_id=payperiod.id, current_view=current_view))
+  return render_template("payperiods.html", users=users, payperiod=payperiod, processable=processable, customer_model=customer_model, navigation=navigation, current_view=current_view)
 
 @app.route("/view_payroll", methods=['GET', 'POST'])
 @login_required
@@ -759,7 +772,7 @@ def timesheet():
   if not user:
     return redirect(url_for("timesheet"))
   if not payperiod:
-    return redirect(url_for("payperiod"))
+    return redirect(url_for("manage_payperiods"))
   navigation = {'next': payperiod.get_next(), 'previous': payperiod.get_previous()}
   timesheet = get_timesheet(user, payperiod)
   logged_hours = get_logged_hours(timesheet)

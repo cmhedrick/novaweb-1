@@ -50,7 +50,11 @@
     <li><a href="javascript:toggleDiv('payperiod_contracts'); javascript:toggleDiv('payperiod_users')">Contracts</a></li>
     </ul>
     </div>
-  <div id="payperiod_users">
+  {% if current_view == "contracts" %}
+    <div id="payperiod_users" style="display: none;">
+  {% else %}
+    <div id="payperiod_users">
+  {% endif %}
     <form action="" method="post">
       <table>
           <thead>
@@ -95,7 +99,11 @@
 
 <br />
 
-  <div id="payperiod_contracts" style="display:none;">
+  {% if current_view == "contracts" %}
+    <div id="payperiod_contracts">
+  {% else %}
+    <div id="payperiod_contracts" style="display:none;">
+  {% endif %}
     <form action="" method="post">
       <table>
           <thead>
