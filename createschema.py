@@ -12,7 +12,7 @@ db.create_all()
 
 print "Database created."
 
-admin = User("admin", "admin", "nwheele3@gmu.edu")
+admin = User("admin", "admin", "christopher.m.hedrick@gmail.com")
 admin_group = Group("admin")
 admin.groups.append(admin_group)
 db.session.add(admin_group)
